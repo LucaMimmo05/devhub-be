@@ -2,6 +2,7 @@ package com.devhub.auth.controller;
 
 import com.devhub.auth.dto.AuthResponse;
 import com.devhub.auth.dto.LoginRequest;
+import com.devhub.auth.dto.RegisterRequest;
 import com.devhub.auth.service.AuthService;
 import jakarta.inject.Inject;
 import jakarta.validation.Valid;
@@ -24,5 +25,11 @@ public class AuthController {
     @Path("/login")
     public AuthResponse login(@Valid LoginRequest loginRequest) {
         return authService.login(loginRequest);
+    }
+
+    @POST
+    @Path("/register")
+    public AuthResponse register(@Valid RegisterRequest registerRequest) {
+        return authService.register(registerRequest);
     }
 }

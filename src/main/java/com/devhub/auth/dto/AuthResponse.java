@@ -1,9 +1,13 @@
 package com.devhub.auth.dto;
 
+import com.devhub.security.jwt.entity.RefreshToken;
+
 public class AuthResponse {
     public String accessToken;
+    public String refreshToken;
 
-    public AuthResponse(String accessToken) {
+    public AuthResponse(String accessToken, String refreshToken) {
         this.accessToken = accessToken;
+        this.refreshToken = refreshToken;
     }
 }
