@@ -4,6 +4,7 @@ import com.devhub.auth.dto.AuthResponse;
 import com.devhub.auth.dto.LoginRequest;
 import com.devhub.auth.dto.RegisterRequest;
 import com.devhub.common.enums.UserRole;
+import com.devhub.common.error.AuthException;
 import com.devhub.security.jwt.repository.RefreshTokenRepository;
 import com.devhub.security.jwt.service.JwtService;
 import com.devhub.security.jwt.entity.RefreshToken;
@@ -39,9 +40,8 @@ public class AuthService {
 
     @Transactional
     public AuthResponse login(LoginRequest request) {
-
         User existing = userRepository.findByEmail(request.email)
-                .orElseThrow(() -> new WebApplicationException("User not found"));
+                .orElseThrow(() -> new AuthException("User not found"));
 
         boolean matches = BcryptUtil.matches(request.password, existing.passwordHash);
 
@@ -49,14 +49,16 @@ public class AuthService {
             throw new UnauthorizedException("Invalid credentials");
         }
 
-        refreshTokenRepository.revokeAllForUser(existing.id);
+        refreshTokenRepository.delete("user.id", existing.id);
 
         String accessToken =jwtService.generateAccessToken(request.email, "USER");
         RefreshToken refreshToken =jwtService.generateRefreshToken(existing);
 
         refreshTokenRepository.persist(refreshToken);
 
-        return new AuthResponse(accessToken, refreshToken.token);
+        UserProfile profile = userProfileRepository.findById(existing.id);
+
+        return new AuthResponse(accessToken, refreshToken.token, profile, existing.id);
     }
 
     @Transactional
@@ -69,7 +71,7 @@ public class AuthService {
 
         userRepository.persist(user);
 
-        UserProfile profile = UserProfile.createForUser(user, request.firstName, request.lastName);
+        UserProfile profile = UserProfile.createForUser(user, request.fullName.split(" ")[0], request.fullName.split(" ")[1]);
 
         userProfileRepository.persist(profile);
 
@@ -78,7 +80,7 @@ public class AuthService {
 
         refreshTokenRepository.persist(refreshTokenEntity);
 
-        return new AuthResponse(accessToken, refreshTokenEntity.token);
+        return new AuthResponse(accessToken, refreshTokenEntity.token, profile, user.id);
     }
 
     @Transactional
@@ -86,18 +88,28 @@ public class AuthService {
         RefreshToken oldRefreshToken = refreshTokenRepository.findByToken(oldRefreshTokenString)
                 .orElseThrow(() -> new UnauthorizedException("Invalid refresh token"));
 
-        if(oldRefreshToken.revoked || oldRefreshToken.expiresAt.isBefore(Instant.now())) {
+        if(oldRefreshToken.expiresAt.isBefore(Instant.now())) {
+            refreshTokenRepository.delete(oldRefreshToken);
             throw new UnauthorizedException("Refresh token expired");
         }
 
-        oldRefreshToken.revoked = true;
+        User user = oldRefreshToken.user;
+        refreshTokenRepository.delete(oldRefreshToken);
 
-        String accessToken =jwtService.generateAccessToken(oldRefreshToken.user.email, oldRefreshToken.user.role.name());
+        String accessToken = jwtService.generateAccessToken(user.email, user.role.name());
 
-        RefreshToken newToken = jwtService.generateRefreshToken(oldRefreshToken.user);
+        RefreshToken newToken = jwtService.generateRefreshToken(user);
 
         refreshTokenRepository.persist(newToken);
 
         return new AuthResponse(accessToken, newToken.token);
+    }
+
+    @Transactional
+    public void logout(String refreshToken) {
+        refreshTokenRepository.findByToken(refreshToken)
+                .ifPresent(token -> {
+                    refreshTokenRepository.delete(token);
+                });
     }
 }
