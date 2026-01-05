@@ -28,7 +28,6 @@ public class JwtService {
         refreshToken.user = user;
         refreshToken.token = UUID.randomUUID().toString();
         refreshToken.expiresAt = Instant.now().plus(Duration.ofDays(30));
-        refreshToken.revoked = false;
 
         return refreshToken;
     }
