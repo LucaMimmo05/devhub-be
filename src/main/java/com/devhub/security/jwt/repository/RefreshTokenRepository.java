@@ -14,18 +14,11 @@ public class RefreshTokenRepository implements PanacheRepositoryBase<RefreshToke
         return find("token", token).firstResultOptional();
     }
 
-
-    public void revokeAllForUser(UUID userId) {
-        update("revoked = true where user.id = ?1 and revoked = false", userId);
+    public long deleteExpired() {
+        return delete("expiresAt < current_timestamp");
     }
-
-
-    public long deleteExpiredOrRevoked() {
-        return delete("expiresAt < current_timestamp or revoked = true");
-    }
-
 
     public boolean hasValidToken(UUID userId) {
-        return count("user.id = ?1 and revoked = false and expiresAt > current_timestamp", userId) > 0;
+        return count("user.id = ?1 and expiresAt > current_timestamp", userId) > 0;
     }
 }

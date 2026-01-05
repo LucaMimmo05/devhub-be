@@ -18,7 +18,4 @@ public class RefreshToken extends BaseEntity {
 
     @Column(name = "expires_at", nullable = false)
     public Instant expiresAt;
-
-    @Column(nullable = false)
-    public boolean revoked = false;
 }
