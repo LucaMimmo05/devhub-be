@@ -1,6 +1,7 @@
 package com.devhub.user.entity;
 
 import com.devhub.common.entity.BaseEntity;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 
 @Entity
@@ -9,6 +10,7 @@ public class UserProfile extends BaseEntity {
 
     @OneToOne
     @JoinColumn(name = "user_id", nullable = false, unique = true)
+    @JsonIgnore
     public User user;
 
     @Column(name = "first_name", nullable = false, length = 100)
