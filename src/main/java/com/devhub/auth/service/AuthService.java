@@ -1,6 +1,7 @@
 package com.devhub.auth.service;
 
 import com.devhub.auth.dto.AuthResponse;
+import com.devhub.auth.dto.AuthResult;
 import com.devhub.auth.dto.LoginRequest;
 import com.devhub.auth.dto.RegisterRequest;
 import com.devhub.common.enums.UserRole;
@@ -39,7 +40,7 @@ public class AuthService {
     UserProfileRepository userProfileRepository;
 
     @Transactional
-    public AuthResponse login(LoginRequest request) {
+    public AuthResult login(LoginRequest request) {
         User existing = userRepository.findByEmail(request.email)
                 .orElseThrow(() -> new AuthException("User not found"));
 
@@ -56,13 +57,15 @@ public class AuthService {
 
         refreshTokenRepository.persist(refreshToken);
 
-        UserProfile profile = userProfileRepository.findById(existing.id);
+        UserProfile profile = userProfileRepository.find("user = ?1", existing).firstResultOptional().orElseThrow(() -> new RuntimeException("No profile found for user " + existing.id));
 
-        return new AuthResponse(accessToken, refreshToken.token, profile, existing.id);
+        System.out.println(profile);
+
+        return new AuthResult(accessToken, refreshToken.token, profile);
     }
 
     @Transactional
-    public AuthResponse register(RegisterRequest request) {
+    public AuthResult register(RegisterRequest request) {
         if (userRepository.findByEmail(request.email).isPresent()) {
             throw new WebApplicationException("Email already exists", Response.Status.CONFLICT);
         }
@@ -80,11 +83,11 @@ public class AuthService {
 
         refreshTokenRepository.persist(refreshTokenEntity);
 
-        return new AuthResponse(accessToken, refreshTokenEntity.token, profile, user.id);
+        return new AuthResult(accessToken, refreshTokenEntity.token, profile);
     }
 
     @Transactional
-    public AuthResponse refresh(String oldRefreshTokenString) {
+    public AuthResult refresh(String oldRefreshTokenString) {
         RefreshToken oldRefreshToken = refreshTokenRepository.findByToken(oldRefreshTokenString)
                 .orElseThrow(() -> new UnauthorizedException("Invalid refresh token"));
 
@@ -102,7 +105,9 @@ public class AuthService {
 
         refreshTokenRepository.persist(newToken);
 
-        return new AuthResponse(accessToken, newToken.token);
+        UserProfile profile = userProfileRepository.find("user = ?1", user).firstResultOptional().orElse(null);
+
+        return new AuthResult(accessToken, newToken.token, profile);
     }
 
     @Transactional

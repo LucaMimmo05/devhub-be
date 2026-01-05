@@ -1,6 +1,7 @@
 package com.devhub.auth.controller;
 
 import com.devhub.auth.dto.AuthResponse;
+import com.devhub.auth.dto.AuthResult;
 import com.devhub.auth.dto.LoginRequest;
 import com.devhub.auth.dto.RegisterRequest;
 import com.devhub.auth.service.AuthService;
@@ -27,22 +28,23 @@ public class AuthController {
     @POST
     @Path("/login")
     public Response login(@Valid LoginRequest loginRequest) {
-        AuthResponse authResponse = authService.login(loginRequest);
-        NewCookie refreshTokenCookie = cookieUtil.createRefreshTokenCookie(authResponse.refreshToken);
-        authResponse.refreshToken = null;
+        AuthResult result = authService.login(loginRequest);
+        NewCookie refreshTokenCookie = cookieUtil.createRefreshTokenCookie(result.refreshToken);
         
-        return Response.ok(authResponse).cookie(refreshTokenCookie).build();
+        AuthResponse response = new AuthResponse(result.accessToken, result.userProfile);
+        
+        return Response.ok(response).cookie(refreshTokenCookie).build();
     }
 
     @POST
     @Path("/register")
     public Response register(@Valid RegisterRequest registerRequest) {
-        AuthResponse authResponse = authService.register(registerRequest);
-        NewCookie refreshTokenCookie = cookieUtil.createRefreshTokenCookie(authResponse.refreshToken);
+        AuthResult result = authService.register(registerRequest);
+        NewCookie refreshTokenCookie = cookieUtil.createRefreshTokenCookie(result.refreshToken);
 
-        authResponse.refreshToken = null;
+        AuthResponse response = new AuthResponse(result.accessToken, result.userProfile);
 
-        return Response.ok(authResponse).cookie(refreshTokenCookie).build();
+        return Response.ok(response).cookie(refreshTokenCookie).build();
     }
 
     @POST
@@ -51,13 +53,13 @@ public class AuthController {
         if (refreshToken == null) {
             throw new NotAuthorizedException("No refresh token found");
         }
-        AuthResponse authResponse = authService.refresh(refreshToken);
+        AuthResult result = authService.refresh(refreshToken);
         
-        NewCookie newRefreshTokenCookie = cookieUtil.createRefreshTokenCookie(authResponse.refreshToken);
+        NewCookie newRefreshTokenCookie = cookieUtil.createRefreshTokenCookie(result.refreshToken);
 
-        authResponse.refreshToken = null;
+        AuthResponse response = new AuthResponse(result.accessToken, result.userProfile);
 
-        return Response.ok(authResponse).cookie(newRefreshTokenCookie).build();
+        return Response.ok(response).cookie(newRefreshTokenCookie).build();
     }
 
     @POST
