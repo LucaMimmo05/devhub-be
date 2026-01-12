@@ -13,11 +13,12 @@ import java.util.UUID;
 @ApplicationScoped
 public class JwtService {
 
-    public String generateAccessToken(String subject, String role) {
+    public String generateAccessToken(String role, UUID userId) {
 
         return Jwt.issuer("devhub")
-                .subject(subject)
+                .subject(String.valueOf(userId))
                 .groups(Set.of(role))
+                .claim("userId", userId)
                 .expiresIn(Duration.ofHours(4))
                 .sign();
     }
