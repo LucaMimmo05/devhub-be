@@ -20,13 +20,18 @@ public class UserProfile extends BaseEntity {
     public String lastName;
 
     @Column(name = "avatar_url")
-    public String avatarUrl;
+    public String avatarUrl = "";
 
-    public static UserProfile createForUser(User user, String firstName, String lastName) {
+    @Column(name = "username", length = 50, unique = true)
+    public String username;
+
+    public static UserProfile createForUser(User user, String firstName, String lastName,String avatarUrl, String username) {
         UserProfile profile = new UserProfile();
         profile.user = user;
         profile.firstName = firstName;
         profile.lastName = lastName;
+        profile.avatarUrl = avatarUrl;
+        profile.username = username;
         return profile;
     }
 }
