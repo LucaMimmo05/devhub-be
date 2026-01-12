@@ -52,12 +52,18 @@ public class AuthService {
 
         refreshTokenRepository.delete("user.id", existing.id);
 
-        String accessToken =jwtService.generateAccessToken(request.email, "USER");
+        String accessToken =jwtService.generateAccessToken( "USER", existing.id);
         RefreshToken refreshToken =jwtService.generateRefreshToken(existing);
 
         refreshTokenRepository.persist(refreshToken);
 
-        UserProfile profile = userProfileRepository.find("user = ?1", existing).firstResultOptional().orElseThrow(() -> new RuntimeException("No profile found for user " + existing.id));
+        UserProfile profile = userProfileRepository.find("user = ?1", existing).firstResultOptional()
+                .orElseThrow(() -> new RuntimeException("No profile found for user " + existing.id));
+
+        if (profile.username == null || profile.username.isBlank()) {
+            profile.username = existing.username;
+            userProfileRepository.persist(profile);
+        }
 
         System.out.println(profile);
 
@@ -74,14 +80,21 @@ public class AuthService {
 
         userRepository.persist(user);
 
-        UserProfile profile = UserProfile.createForUser(user, request.fullName.split(" ")[0], request.fullName.split(" ")[1]);
+        String[] nameParts = request.fullName.split(" ", 2);
+        String firstName = nameParts[0];
+        String lastName = nameParts.length > 1 ? nameParts[1] : "";
+
+        UserProfile profile = UserProfile.createForUser(user, firstName, lastName, request.avatarUrl ,request.username);
 
         userProfileRepository.persist(profile);
 
-        String accessToken = jwtService.generateAccessToken(user.email, user.role.name());
+
+        String accessToken = jwtService.generateAccessToken( user.role.name(), user.id);
         RefreshToken refreshTokenEntity = jwtService.generateRefreshToken(user);
 
         refreshTokenRepository.persist(refreshTokenEntity);
+
+
 
         return new AuthResult(accessToken, refreshTokenEntity.token, profile);
     }
@@ -99,13 +112,18 @@ public class AuthService {
         User user = oldRefreshToken.user;
         refreshTokenRepository.delete(oldRefreshToken);
 
-        String accessToken = jwtService.generateAccessToken(user.email, user.role.name());
+        String accessToken = jwtService.generateAccessToken( user.role.name(), user.id);
 
         RefreshToken newToken = jwtService.generateRefreshToken(user);
 
         refreshTokenRepository.persist(newToken);
 
         UserProfile profile = userProfileRepository.find("user = ?1", user).firstResultOptional().orElse(null);
+
+        if (profile != null && (profile.username == null || profile.username.isBlank())) {
+            profile.username = user.username;
+            userProfileRepository.persist(profile);
+        }
 
         return new AuthResult(accessToken, newToken.token, profile);
     }
