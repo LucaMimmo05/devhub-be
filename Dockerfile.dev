@@ -1,0 +1,12 @@
+FROM maven:3.9.6-eclipse-temurin-21 AS dev
+WORKDIR /app
+
+# Copia solo pom e scarica dipendenze per caching layer
+COPY pom.xml .
+RUN mvn dependency:go-offline -B
+
+# Copia tutto il codice
+COPY src ./src
+
+# Avvio in dev mode (hot reload)
+CMD ["mvn", "quarkus:dev", "-Dquarkus.http.host=0.0.0.0"]
