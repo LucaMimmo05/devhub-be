@@ -13,6 +13,7 @@ public class BaseEntity extends PanacheEntityBase {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     public UUID id;
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     public OffsetDateTime createdAt;
@@ -20,4 +21,13 @@ public class BaseEntity extends PanacheEntityBase {
     @UpdateTimestamp
     @Column(name = "updated_at")
     public OffsetDateTime updatedAt;
+
+    public OffsetDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public OffsetDateTime getUpdatedAt() {
+        return updatedAt;
+    }
 }
+
