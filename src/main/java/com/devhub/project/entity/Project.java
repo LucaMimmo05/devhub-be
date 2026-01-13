@@ -25,11 +25,11 @@ public class Project extends BaseEntity {
 
     @Column(name = "status", nullable = false)
     @Enumerated(EnumType.STRING)
-    public Status status;
+    public Status status = Status.PENDING;
 
     @Column(name = "priority", nullable = false)
     @Enumerated(EnumType.STRING)
-    public Priority priority;
+    public Priority priority = Priority.MEDIUM;
 
     @Column(name = "due_date")
     public OffsetDateTime dueDate;
@@ -40,6 +40,9 @@ public class Project extends BaseEntity {
 
     @Column(name = "img_url")
     public String imgUrl;
+
+    @Column(name = "progress")
+    public Integer progress = 0;
 
     @OneToMany(mappedBy = "project", cascade = CascadeType.ALL, orphanRemoval = true)
     public Set<ProjectMember> members = new HashSet<>();
