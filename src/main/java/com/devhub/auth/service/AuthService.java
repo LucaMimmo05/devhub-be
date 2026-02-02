@@ -75,6 +75,10 @@ public class AuthService {
             throw new WebApplicationException("Email already exists", Response.Status.CONFLICT);
         }
 
+        if (userRepository.find("username = ?1", request.username).firstResultOptional().isPresent()) {
+            throw new WebApplicationException("Username already exists", Response.Status.CONFLICT);
+        }
+
         User user = User.createNew(request.email, request.username, request.password);
 
         userRepository.persist(user);
@@ -133,5 +137,9 @@ public class AuthService {
                 .ifPresent(token -> {
                     refreshTokenRepository.delete(token);
                 });
+    }
+
+    public boolean isEmailExists(String email) {
+        return userRepository.findByEmail(email).isPresent();
     }
 }
