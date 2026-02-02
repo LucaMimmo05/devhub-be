@@ -1,8 +1,7 @@
-package com.devhub.project.controller;
+package com.devhub.project.entity;
 
 import com.devhub.common.entity.BaseEntity;
 import com.devhub.common.enums.ProjectRole;
-import com.devhub.project.entity.Project;
 import com.devhub.user.entity.UserProfile;
 import jakarta.persistence.*;
 

@@ -3,7 +3,6 @@ package com.devhub.project.entity;
 import com.devhub.common.entity.BaseEntity;
 import com.devhub.common.enums.Priority;
 import com.devhub.common.enums.Status;
-import com.devhub.project.controller.ProjectMember;
 import com.devhub.user.entity.UserProfile;
 import jakarta.persistence.*;
 

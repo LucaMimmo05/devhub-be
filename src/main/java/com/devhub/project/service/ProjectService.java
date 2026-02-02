@@ -6,7 +6,7 @@ import com.devhub.project.dto.ProjectRequest;
 import com.devhub.project.dto.ProjectResponse;
 import com.devhub.project.entity.Project;
 import com.devhub.project.repository.ProjectRepository;
-import com.devhub.project.controller.ProjectMember;
+import com.devhub.project.entity.ProjectMember;
 import com.devhub.user.entity.UserProfile;
 import com.devhub.user.repository.UserProfileRepository;
 import jakarta.enterprise.context.ApplicationScoped;
