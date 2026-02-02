@@ -1,4 +1,4 @@
-package com.devhub.projectmember.entity;
+package com.devhub.project.controller;
 
 import com.devhub.common.entity.BaseEntity;
 import com.devhub.common.enums.ProjectRole;

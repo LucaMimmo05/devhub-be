@@ -3,13 +3,12 @@ package com.devhub.project.entity;
 import com.devhub.common.entity.BaseEntity;
 import com.devhub.common.enums.Priority;
 import com.devhub.common.enums.Status;
-import com.devhub.projectmember.entity.ProjectMember;
+import com.devhub.project.controller.ProjectMember;
 import com.devhub.user.entity.UserProfile;
 import jakarta.persistence.*;
 
 import java.time.OffsetDateTime;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;

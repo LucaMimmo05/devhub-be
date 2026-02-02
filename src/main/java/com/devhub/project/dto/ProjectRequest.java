@@ -17,7 +17,6 @@ public class ProjectRequest {
     @Size(min = 10, max = 500, message = "Description must be between 10 and 500 characters")
     public String description;
 
-    @NotBlank(message = "Image URL cannot be blank")
     @Size(max = 255, message = "Image URL must be at most 255 characters")
     @URL(message = "Image URL must be a valid URL starting with http or https")
     public String imageUrl;

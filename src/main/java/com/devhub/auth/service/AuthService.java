@@ -65,7 +65,6 @@ public class AuthService {
             userProfileRepository.persist(profile);
         }
 
-        System.out.println(profile);
 
         return new AuthResult(accessToken, refreshToken.token, profile);
     }
