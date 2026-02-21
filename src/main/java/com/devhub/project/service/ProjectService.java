@@ -51,6 +51,16 @@ public class ProjectService {
     }
 
 
+    public ProjectResponse getUserProjectById(UUID projectId, String userId) {
+        Project project = projectRepository.findById(projectId);
+        if (project == null) {
+            throw new NotFoundException("Project not found");
+        }
+        if (!project.owner.user.id.toString().equals(userId) && project.members.stream().noneMatch(pm -> pm.userProfile.user.id.toString().equals(userId))) {
+            throw new NotFoundException("Project not found");
+        }
+        return toResponse(project);
+    }
 
 
     private Project toEntity(ProjectRequest request, UUID userId) {

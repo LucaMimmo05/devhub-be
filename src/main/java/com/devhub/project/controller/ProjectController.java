@@ -38,4 +38,11 @@ public class ProjectController {
         String userId = ctx.getUserPrincipal().getName();
         return projectService.createProject(request, UUID.fromString(userId));
     }
+
+    @GET
+    @Path("/{projectId}")
+    public ProjectResponse getUserProjectById(@Context SecurityContext ctx, @PathParam("projectId") UUID projectId) {
+        String userId = ctx.getUserPrincipal().getName();
+        return projectService.getUserProjectById(projectId, userId);
+    }
 }
