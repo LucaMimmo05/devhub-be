@@ -1,6 +1,7 @@
 package com.devhub.auth.controller;
 
-import com.devhub.auth.dto.VerifyEmailRequest;
+import com.devhub.auth.dto.SendOtpRequest;
+import com.devhub.auth.dto.VerifyOtpRequest;
 import com.devhub.auth.service.EmailService;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.Consumes;
@@ -19,10 +20,19 @@ public class EmailController {
     @Inject
     EmailService emailService;
 
-    @Path( "/verify")
+    @Path( "/resend")
     @POST
-    public Response verifyEmail(VerifyEmailRequest request) {
-        emailService.confirmEmail(request.email);
+    public Response sendOtp(SendOtpRequest request) {
+        emailService.sendOtpToVerifyEmail(request.email);
         return Response.ok().build();
     }
+
+    @Path("/verify")
+    @POST
+    public Response verifyOtp(VerifyOtpRequest request) {
+        emailService.verifyOtpToVerifyEmail(request.otp, request.email);
+        return Response.ok("Email verified").build();
+    }
+
+
 }

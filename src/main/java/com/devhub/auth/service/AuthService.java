@@ -132,6 +132,16 @@ public class AuthService {
     }
 
     @Transactional
+    public void markEmailAsVerified(String email) {
+        User user = userRepository.findByEmail(email).orElseThrow(() -> new AuthException("User not found"));
+
+        user.isEmailVerified = true;
+
+        userRepository.persist(user);
+
+    }
+
+    @Transactional
     public void logout(String refreshToken) {
         refreshTokenRepository.findByToken(refreshToken)
                 .ifPresent(token -> {

@@ -17,9 +17,6 @@ public class OtpService {
     private static final SecureRandom random = new SecureRandom();
     private static final Duration OTP_EXPIRATION = Duration.ofMinutes(5);
 
-    public String generateOtp(String email) {
-        return generateOtpWithType(email, "PASSWORD_RESET");
-    }
 
     public String generateOtpWithType(String email, String type) {
         ValueCommands<String, String> commands = redisDataSource.value(String.class);
@@ -34,9 +31,6 @@ public class OtpService {
         return otp;
     }
 
-    public boolean verifyOtp(String email, String otp) {
-        return verifyOtpWithType(email, otp, "PASSWORD_RESET");
-    }
 
     public boolean verifyOtpWithType(String email, String otp, String type) {
         ValueCommands<String, String> commands = redisDataSource.value(String.class);
@@ -56,10 +50,10 @@ public class OtpService {
         return valid;
     }
 
-    public boolean hasActiveResetRequest(String email) {
+    public boolean hasActiveEmailVerificationRequest(String email) {
         ValueCommands<String, String> commands = redisDataSource.value(String.class);
 
-        String key = "otp:" + email + ":PASSWORD_RESET";
+        String key = "otp:" + email + ":EMAIL_CONFIRMATION";
         return commands.get(key) != null;
     }
 }

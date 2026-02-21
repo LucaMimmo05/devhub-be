@@ -25,11 +25,15 @@ public class EmailService {
     @Location("confirmEmail.html")
     Template confirmEmailTemplate;
 
-    public void confirmEmail(String toEmail) {
-        String otp = otpService.generateOtp(toEmail);
+    public void sendOtpToVerifyEmail(String toEmail) {
         if (!authService.isEmailExists(toEmail)) {
             throw new AuthException("Email does not exist: " + toEmail);
         }
+
+        if(otpService.hasActiveEmailVerificationRequest(toEmail)) {
+            throw new AuthException("A reset request is already in progress for this email");
+        }
+        String otp = otpService.generateOtpWithType(toEmail, "EMAIL_CONFIRMATION");
         String bodyHtml = confirmEmailTemplate
                 .data("otp", otp)
                 .render();
@@ -43,5 +47,15 @@ public class EmailService {
         mailer.send(email);
     }
 
+    public void verifyOtpToVerifyEmail(String otp, String email) {
+        boolean isValid = otpService.verifyOtpWithType(email, otp, "EMAIL_CONFIRMATION");
+
+        if (!isValid) {
+            throw new AuthException("Invalid OTP");
+        }
+
+        authService.markEmailAsVerified(email);
+
+    }
 }
 
