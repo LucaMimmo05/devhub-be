@@ -9,20 +9,22 @@ public class CookieUtil {
     public NewCookie createRefreshTokenCookie(String token) {
         return new NewCookie.Builder("refreshToken")
                 .value(token)
-                .path("/auth")
+                .path("/")
                 .httpOnly(true)
                 .secure(false)
-                .maxAge(7 * 24 * 60 * 60)
+                .maxAge(30 * 24 * 60 * 60)
+                .sameSite(NewCookie.SameSite.LAX)
                 .build();
     }
 
     public NewCookie deleteRefreshTokenCookie() {
         return new NewCookie.Builder("refreshToken")
                 .value("")
-                .path("/auth")
+                .path("/")
                 .httpOnly(true)
                 .secure(false)
                 .maxAge(0)
+                .sameSite(NewCookie.SameSite.LAX)
                 .build();
     }
 }
