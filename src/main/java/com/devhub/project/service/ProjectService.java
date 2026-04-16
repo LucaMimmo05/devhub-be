@@ -9,9 +9,11 @@ import com.devhub.project.repository.ProjectRepository;
 import com.devhub.project.entity.ProjectMember;
 import com.devhub.user.entity.UserProfile;
 import com.devhub.user.repository.UserProfileRepository;
+import com.devhub.common.enums.ProjectRole;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
+import jakarta.ws.rs.ForbiddenException;
 import jakarta.ws.rs.NotFoundException;
 
 import java.time.OffsetDateTime;
@@ -62,6 +64,66 @@ public class ProjectService {
         return toResponse(project);
     }
 
+
+    @Transactional
+    public ProjectResponse updateProject(UUID projectId, ProjectRequest request, UUID userId) {
+        Project project = projectRepository.findById(projectId);
+        if (project == null) throw new NotFoundException("Project not found");
+        if (!project.owner.user.id.equals(userId)) throw new ForbiddenException("Only the owner can edit this project");
+
+        if (request.title != null) project.title = request.title;
+        if (request.description != null) project.description = request.description;
+        if (request.imageUrl != null) project.imgUrl = request.imageUrl;
+        if (request.status != null) project.status = request.status;
+        if (request.priority != null) project.priority = request.priority;
+        if (request.dueDate != null) project.dueDate = request.dueDate;
+        if (request.progress != null) project.progress = request.progress;
+
+        projectRepository.persist(project);
+        return toResponse(project);
+    }
+
+    @Transactional
+    public void deleteProject(UUID projectId, UUID userId) {
+        Project project = projectRepository.findById(projectId);
+        if (project == null) throw new NotFoundException("Project not found");
+        if (!project.owner.user.id.equals(userId)) throw new ForbiddenException("Only the owner can delete this project");
+        projectRepository.delete(project);
+    }
+
+    @Transactional
+    public ProjectResponse addMember(UUID projectId, UUID memberProfileId, UUID requestingUserId) {
+        Project project = projectRepository.findById(projectId);
+        if (project == null) throw new NotFoundException("Project not found");
+        if (!project.owner.user.id.equals(requestingUserId)) throw new ForbiddenException("Only the owner can add members");
+
+        boolean alreadyMember = project.members.stream()
+                .anyMatch(pm -> pm.userProfile.id.equals(memberProfileId));
+        if (alreadyMember) return toResponse(project);
+
+        UserProfile memberProfile = userProfileRepository.findById(memberProfileId);
+        if (memberProfile == null) throw new NotFoundException("User profile not found");
+
+        ProjectMember pm = new ProjectMember();
+        pm.userProfile = memberProfile;
+        pm.project = project;
+        pm.role = ProjectRole.MEMBER;
+        project.members.add(pm);
+
+        projectRepository.persist(project);
+        return toResponse(project);
+    }
+
+    @Transactional
+    public ProjectResponse removeMember(UUID projectId, UUID memberProfileId, UUID requestingUserId) {
+        Project project = projectRepository.findById(projectId);
+        if (project == null) throw new NotFoundException("Project not found");
+        if (!project.owner.user.id.equals(requestingUserId)) throw new ForbiddenException("Only the owner can remove members");
+
+        project.members.removeIf(pm -> pm.userProfile.id.equals(memberProfileId));
+        projectRepository.persist(project);
+        return toResponse(project);
+    }
 
     private Project toEntity(ProjectRequest request, UUID userId) {
         Project project = new Project();
