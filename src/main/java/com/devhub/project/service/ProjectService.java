@@ -1,6 +1,7 @@
 package com.devhub.project.service;
 
 import com.devhub.common.enums.Priority;
+import com.devhub.common.enums.ProjectRole;
 import com.devhub.common.enums.Status;
 import com.devhub.project.dto.ProjectRequest;
 import com.devhub.project.dto.ProjectResponse;
@@ -9,7 +10,6 @@ import com.devhub.project.repository.ProjectRepository;
 import com.devhub.project.entity.ProjectMember;
 import com.devhub.user.entity.UserProfile;
 import com.devhub.user.repository.UserProfileRepository;
-import com.devhub.common.enums.ProjectRole;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
@@ -170,15 +170,27 @@ public class ProjectService {
         dto.imageUrl = project.imgUrl;
         dto.status = project.status != null ? project.status : Status.PENDING;
         dto.priority = project.priority != null ? project.priority : Priority.MEDIUM;
-        dto.dueDate = project.dueDate != null ? project.dueDate : null;
+        dto.dueDate = project.dueDate;
         dto.progress = project.progress != null ? project.progress : 0;
-        dto.ownerId = project.owner != null ? project.owner.user.id.toString() : null;
         dto.createdAt = project.getCreatedAt();
         dto.updatedAt = project.getUpdatedAt();
 
-        dto.memberIds = project.members.stream()
-                .map(pm -> pm.userProfile.user.id.toString())
-                .toList();
+        if (project.owner != null) {
+            dto.ownerId = project.owner.user.id.toString();
+            dto.ownerUsername = project.owner.username;
+            dto.ownerAvatarUrl = project.owner.avatarUrl;
+        }
+
+        dto.members = project.members.stream().map(pm -> {
+            ProjectResponse.MemberSummary ms = new ProjectResponse.MemberSummary();
+            ms.profileId = pm.userProfile.id;
+            ms.username = pm.userProfile.username;
+            ms.firstName = pm.userProfile.firstName;
+            ms.lastName = pm.userProfile.lastName;
+            ms.avatarUrl = pm.userProfile.avatarUrl;
+            ms.role = pm.role != null ? pm.role.name() : "MEMBER";
+            return ms;
+        }).toList();
 
         return dto;
     }
