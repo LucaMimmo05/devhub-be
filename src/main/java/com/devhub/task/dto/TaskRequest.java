@@ -3,6 +3,7 @@ package com.devhub.task.dto;
 import com.devhub.common.enums.Priority;
 import com.devhub.common.enums.Status;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
 import java.time.OffsetDateTime;
@@ -23,6 +24,7 @@ public class TaskRequest {
 
     public OffsetDateTime dueDate;
 
+    @NotNull
     public UUID projectId;
 
     public UUID assignedToProfileId;

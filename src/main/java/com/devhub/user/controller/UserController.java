@@ -13,6 +13,7 @@ import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.SecurityContext;
 
+import java.util.List;
 import java.util.UUID;
 
 @Path("/users")
@@ -47,6 +48,14 @@ public class UserController {
 
         userProfileRepository.persist(profile);
         return toResponse(profile);
+    }
+
+    @GET
+    @Path("/search")
+    public List<UserProfileResponse> searchUsers(@QueryParam("username") String username) {
+        if (username == null || username.isBlank()) return List.of();
+        return userProfileRepository.find("lower(username) like lower(?1)", "%" + username + "%")
+                .list().stream().map(this::toResponse).toList();
     }
 
     private UserProfileResponse toResponse(UserProfile profile) {

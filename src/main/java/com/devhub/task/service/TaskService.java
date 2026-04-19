@@ -64,11 +64,9 @@ public class TaskService {
         task.priority = request.priority != null ? request.priority : Priority.MEDIUM;
         task.dueDate = request.dueDate;
 
-        if (request.projectId != null) {
-            Project project = projectRepository.findById(request.projectId);
-            if (project == null) throw new NotFoundException("Project not found");
-            task.project = project;
-        }
+        Project project = projectRepository.findById(request.projectId);
+        if (project == null) throw new NotFoundException("Project not found");
+        task.project = project;
 
         if (request.assignedToProfileId != null) {
             UserProfile assigned = userProfileRepository.findById(request.assignedToProfileId);
