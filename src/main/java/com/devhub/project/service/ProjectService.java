@@ -177,6 +177,7 @@ public class ProjectService {
 
         if (project.owner != null) {
             dto.ownerId = project.owner.user.id.toString();
+            dto.ownerProfileId = project.owner.id.toString();
             dto.ownerUsername = project.owner.username;
             dto.ownerAvatarUrl = project.owner.avatarUrl;
         }

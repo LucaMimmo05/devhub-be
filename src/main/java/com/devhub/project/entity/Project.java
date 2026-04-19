@@ -48,7 +48,7 @@ public class Project extends BaseEntity {
 
     public Set<UUID> getMemberIds() {
         return members.stream()
-                .map(m -> m.userProfile.id)
+                .map(m -> m.userProfile.user.id)
                 .collect(Collectors.toSet());
     }
 }

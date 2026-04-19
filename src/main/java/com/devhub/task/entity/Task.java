@@ -37,4 +37,8 @@ public class Task extends BaseEntity {
     @ManyToOne
     @JoinColumn(name = "assigned_to_id")
     public UserProfile assignedTo;
+
+    @ManyToOne
+    @JoinColumn(name = "created_by_id")
+    public UserProfile createdBy;
 }

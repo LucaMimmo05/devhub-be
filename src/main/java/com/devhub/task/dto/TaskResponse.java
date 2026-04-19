@@ -18,6 +18,7 @@ public class TaskResponse {
     public String projectTitle;
     public UUID assignedToProfileId;
     public String assignedToUsername;
+    public UUID createdByProfileId;
     public OffsetDateTime createdAt;
     public OffsetDateTime updatedAt;
 }

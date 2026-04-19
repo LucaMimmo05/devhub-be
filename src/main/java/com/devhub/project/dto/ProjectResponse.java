@@ -14,6 +14,7 @@ public class ProjectResponse {
     public String description;
     public String imageUrl;
     public String ownerId;
+    public String ownerProfileId;
     public String ownerUsername;
     public String ownerAvatarUrl;
     public List<MemberSummary> members;

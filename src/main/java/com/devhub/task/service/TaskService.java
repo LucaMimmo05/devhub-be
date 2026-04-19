@@ -75,6 +75,8 @@ public class TaskService {
             task.assignedTo = profile;
         }
 
+        task.createdBy = profile;
+
         taskRepository.persist(task);
         return toResponse(task);
     }
@@ -84,10 +86,10 @@ public class TaskService {
         Task task = taskRepository.findById(taskId);
         if (task == null) throw new NotFoundException("Task not found");
 
-        if (task.assignedTo != null && !task.assignedTo.user.id.equals(requestingUserId)) {
-            if (task.project == null || !task.project.owner.user.id.equals(requestingUserId)) {
-                throw new ForbiddenException("Access denied");
-            }
+        boolean isCreator = task.createdBy != null && task.createdBy.user.id.equals(requestingUserId);
+        boolean isProjectOwner = task.project != null && task.project.owner.user.id.equals(requestingUserId);
+        if (!isCreator && !isProjectOwner) {
+            throw new ForbiddenException("Access denied");
         }
 
         if (request.title != null) task.title = request.title;
@@ -136,6 +138,9 @@ public class TaskService {
         if (task.assignedTo != null) {
             dto.assignedToProfileId = task.assignedTo.id;
             dto.assignedToUsername = task.assignedTo.username;
+        }
+        if (task.createdBy != null) {
+            dto.createdByProfileId = task.createdBy.id;
         }
         return dto;
     }
