@@ -77,7 +77,6 @@ public class ProjectService {
         if (request.status != null) project.status = request.status;
         if (request.priority != null) project.priority = request.priority;
         if (request.dueDate != null) project.dueDate = request.dueDate;
-        if (request.progress != null) project.progress = request.progress;
 
         projectRepository.persist(project);
         return toResponse(project);
@@ -131,7 +130,6 @@ public class ProjectService {
         project.description = request.description;
         project.imgUrl = request.imageUrl;
         project.dueDate = request.dueDate;
-        project.progress = request.progress != null ? request.progress : 0;
         project.createdAt = OffsetDateTime.now();
         project.updatedAt = OffsetDateTime.now();
 
@@ -171,7 +169,6 @@ public class ProjectService {
         dto.status = project.status != null ? project.status : Status.PENDING;
         dto.priority = project.priority != null ? project.priority : Priority.MEDIUM;
         dto.dueDate = project.dueDate;
-        dto.progress = project.progress != null ? project.progress : 0;
         dto.createdAt = project.getCreatedAt();
         dto.updatedAt = project.getUpdatedAt();
 

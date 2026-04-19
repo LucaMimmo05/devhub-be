@@ -39,9 +39,6 @@ public class Project extends BaseEntity {
     @Column(name = "img_url")
     public String imgUrl;
 
-    @Column(name = "progress")
-    public Integer progress = 0;
-
     @OneToMany(mappedBy = "project", cascade = CascadeType.ALL, orphanRemoval = true)
     public Set<ProjectMember> members = new HashSet<>();
 

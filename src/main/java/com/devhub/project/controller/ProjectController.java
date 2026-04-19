@@ -81,8 +81,13 @@ public class ProjectController {
 
     @GET
     @Path("/{projectId}/tasks")
-    public List<TaskResponse> getProjectTasks(@Context SecurityContext ctx, @PathParam("projectId") UUID projectId) {
+    public List<TaskResponse> getProjectTasks(
+            @Context SecurityContext ctx,
+            @PathParam("projectId") UUID projectId,
+            @QueryParam("status") com.devhub.common.enums.Status status,
+            @QueryParam("priority") com.devhub.common.enums.Priority priority,
+            @QueryParam("search") String search) {
         UUID userId = UUID.fromString(ctx.getUserPrincipal().getName());
-        return taskService.getProjectTasks(projectId, userId);
+        return taskService.getProjectTasks(projectId, userId, status, priority, search);
     }
 }

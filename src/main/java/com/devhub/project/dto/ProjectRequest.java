@@ -2,7 +2,7 @@ package com.devhub.project.dto;
 
 import com.devhub.common.enums.Priority;
 import com.devhub.common.enums.Status;
-import jakarta.validation.constraints.*;
+import jakarta.validation.constraints.Size;
 
 import java.time.OffsetDateTime;
 
@@ -27,7 +27,4 @@ public class ProjectRequest {
 
     public OffsetDateTime dueDate;
 
-    @Min(0)
-    @Max(100)
-    public Integer progress;
 }
