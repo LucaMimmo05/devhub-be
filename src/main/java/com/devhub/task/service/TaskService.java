@@ -31,14 +31,14 @@ public class TaskService {
     @Inject
     UserProfileRepository userProfileRepository;
 
-    public List<TaskResponse> getUserTasks(UUID userProfileId) {
-        return taskRepository.findByAssignedUserId(userProfileId)
+    public List<TaskResponse> getUserTasks(UUID userProfileId, Status status, Priority priority, String search) {
+        return taskRepository.findByAssignedUserId(userProfileId, status, priority, search)
                 .stream()
                 .map(this::toResponse)
                 .toList();
     }
 
-    public List<TaskResponse> getProjectTasks(UUID projectId, UUID requestingUserId) {
+    public List<TaskResponse> getProjectTasks(UUID projectId, UUID requestingUserId, Status status, Priority priority, String search) {
         Project project = projectRepository.findById(projectId);
         if (project == null) throw new NotFoundException("Project not found");
 
@@ -46,7 +46,7 @@ public class TaskService {
                 project.members.stream().anyMatch(pm -> pm.userProfile.user.id.equals(requestingUserId));
         if (!isMember) throw new ForbiddenException("Access denied");
 
-        return taskRepository.findByProjectId(projectId)
+        return taskRepository.findByProjectId(projectId, status, priority, search)
                 .stream()
                 .map(this::toResponse)
                 .toList();
@@ -112,10 +112,10 @@ public class TaskService {
         Task task = taskRepository.findById(taskId);
         if (task == null) throw new NotFoundException("Task not found");
 
-        boolean isAssignee = task.assignedTo != null && task.assignedTo.user.id.equals(requestingUserId);
+        boolean isCreator = task.createdBy != null && task.createdBy.user.id.equals(requestingUserId);
         boolean isProjectOwner = task.project != null && task.project.owner.user.id.equals(requestingUserId);
 
-        if (!isAssignee && !isProjectOwner) throw new ForbiddenException("Access denied");
+        if (!isCreator && !isProjectOwner) throw new ForbiddenException("Access denied");
 
         taskRepository.delete(task);
     }

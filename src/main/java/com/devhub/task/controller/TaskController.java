@@ -1,5 +1,7 @@
 package com.devhub.task.controller;
 
+import com.devhub.common.enums.Priority;
+import com.devhub.common.enums.Status;
 import com.devhub.task.dto.TaskRequest;
 import com.devhub.task.dto.TaskResponse;
 import com.devhub.task.service.TaskService;
@@ -30,11 +32,15 @@ public class TaskController {
     UserProfileRepository userProfileRepository;
 
     @GET
-    public List<TaskResponse> getMyTasks(@Context SecurityContext ctx) {
+    public List<TaskResponse> getMyTasks(
+            @Context SecurityContext ctx,
+            @QueryParam("status") Status status,
+            @QueryParam("priority") Priority priority,
+            @QueryParam("search") String search) {
         UUID userId = UUID.fromString(ctx.getUserPrincipal().getName());
         UserProfile profile = userProfileRepository.find("user.id", userId).firstResult();
         if (profile == null) throw new NotFoundException("Profile not found");
-        return taskService.getUserTasks(profile.id);
+        return taskService.getUserTasks(profile.id, status, priority, search);
     }
 
     @POST
