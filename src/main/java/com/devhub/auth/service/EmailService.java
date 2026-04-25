@@ -62,8 +62,7 @@ public class EmailService {
 
     public void sendPasswordResetOtp(String toEmail) {
         if (!authService.isEmailExists(toEmail)) {
-            // Non riveliamo se l'email esiste o meno per sicurezza
-            return;
+            throw new AuthException("No account found with that email address");
         }
 
         String otp = otpService.generateOtpWithType(toEmail, "PASSWORD_RESET");
