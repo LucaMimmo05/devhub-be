@@ -32,6 +32,15 @@ public class OtpService {
     }
 
 
+    /** Verifica l'OTP senza eliminarlo da Redis (usato per lo step intermedio di conferma). */
+    public boolean peekOtpWithType(String email, String otp, String type) {
+        ValueCommands<String, String> commands = redisDataSource.value(String.class);
+        String key = "otp:" + email + ":" + type;
+        String hash = commands.get(key);
+        if (hash == null) return false;
+        return BcryptUtil.matches(otp, hash);
+    }
+
     public boolean verifyOtpWithType(String email, String otp, String type) {
         ValueCommands<String, String> commands = redisDataSource.value(String.class);
 

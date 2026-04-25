@@ -79,6 +79,13 @@ public class EmailService {
         mailer.send(email);
     }
 
+    public void verifyResetOtp(String email, String otp) {
+        boolean isValid = otpService.peekOtpWithType(email, otp, "PASSWORD_RESET");
+        if (!isValid) {
+            throw new AuthException("Invalid or expired reset code");
+        }
+    }
+
     public void verifyOtpAndResetPassword(String email, String otp, @NotBlank String newPassword) {
         boolean isValid = otpService.verifyOtpWithType(email, otp, "PASSWORD_RESET");
 

@@ -101,6 +101,13 @@ public class AuthController {
     }
 
     @POST
+    @Path("/verify-reset-otp")
+    public Response verifyResetOtp(@Valid VerifyOtpRequest request) {
+        emailService.verifyResetOtp(request.email, request.otp);
+        return Response.ok().build();
+    }
+
+    @POST
     @Path("/resend-reset-otp")
     public Response resendResetOtp(@Valid SendOtpRequest request) {
         emailService.sendPasswordResetOtp(request.email);
