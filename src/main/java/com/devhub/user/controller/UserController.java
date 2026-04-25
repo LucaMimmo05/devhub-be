@@ -4,6 +4,7 @@ import com.devhub.user.dto.UpdateProfileRequest;
 import com.devhub.user.dto.UserProfileResponse;
 import com.devhub.user.entity.UserProfile;
 import com.devhub.user.repository.UserProfileRepository;
+import com.devhub.user.service.UserService;
 import io.quarkus.security.Authenticated;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
@@ -11,6 +12,7 @@ import jakarta.validation.Valid;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.core.SecurityContext;
 
 import java.util.List;
@@ -24,6 +26,9 @@ public class UserController {
 
     @Inject
     UserProfileRepository userProfileRepository;
+
+    @Inject
+    UserService userService;
 
     @GET
     @Path("/me")
@@ -48,6 +53,14 @@ public class UserController {
 
         userProfileRepository.persist(profile);
         return toResponse(profile);
+    }
+
+    @DELETE
+    @Path("/me")
+    public Response deleteMe(@Context SecurityContext ctx) {
+        UUID userId = UUID.fromString(ctx.getUserPrincipal().getName());
+        userService.deleteUser(userId);
+        return Response.noContent().build();
     }
 
     @GET

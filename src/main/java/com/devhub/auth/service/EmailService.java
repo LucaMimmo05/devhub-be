@@ -7,6 +7,7 @@ import io.quarkus.qute.Location;
 import io.quarkus.qute.Template;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
+import jakarta.validation.constraints.NotBlank;
 
 @ApplicationScoped
 public class EmailService {
@@ -25,14 +26,16 @@ public class EmailService {
     @Location("confirmEmail.html")
     Template confirmEmailTemplate;
 
+    @Inject
+    @Location("resetPassword.html")
+    Template resetPasswordTemplate;
+
     public void sendOtpToVerifyEmail(String toEmail) {
         if (!authService.isEmailExists(toEmail)) {
             throw new AuthException("Email does not exist: " + toEmail);
         }
 
-        if(otpService.hasActiveEmailVerificationRequest(toEmail)) {
-            throw new AuthException("A reset request is already in progress for this email");
-        }
+        // Sovrascriviamo sempre l'OTP esistente: permette il resend senza errori
         String otp = otpService.generateOtpWithType(toEmail, "EMAIL_CONFIRMATION");
         String bodyHtml = confirmEmailTemplate
                 .data("otp", otp)
@@ -55,7 +58,42 @@ public class EmailService {
         }
 
         authService.markEmailAsVerified(email);
+    }
 
+    public void sendPasswordResetOtp(String toEmail) {
+        if (!authService.isEmailExists(toEmail)) {
+            throw new AuthException("No account found with that email address");
+        }
+
+        String otp = otpService.generateOtpWithType(toEmail, "PASSWORD_RESET");
+        String bodyHtml = resetPasswordTemplate
+                .data("otp", otp)
+                .render();
+
+        Mail email = Mail.withHtml(
+                toEmail,
+                "Reset your DevHub password",
+                bodyHtml
+        );
+
+        mailer.send(email);
+    }
+
+    public void verifyResetOtp(String email, String otp) {
+        boolean isValid = otpService.peekOtpWithType(email, otp, "PASSWORD_RESET");
+        if (!isValid) {
+            throw new AuthException("Invalid or expired reset code");
+        }
+    }
+
+    public void verifyOtpAndResetPassword(String email, String otp, @NotBlank String newPassword) {
+        boolean isValid = otpService.verifyOtpWithType(email, otp, "PASSWORD_RESET");
+
+        if (!isValid) {
+            throw new AuthException("Invalid or expired reset code");
+        }
+
+        authService.resetPassword(email, newPassword);
     }
 }
 
