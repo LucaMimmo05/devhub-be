@@ -152,4 +152,12 @@ public class AuthService {
     public boolean isEmailExists(String email) {
         return userRepository.findByEmail(email).isPresent();
     }
+
+    @Transactional
+    public void resetPassword(String email, String newPassword) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new AuthException("User not found"));
+        user.passwordHash = BcryptUtil.bcryptHash(newPassword);
+        userRepository.persist(user);
+    }
 }
