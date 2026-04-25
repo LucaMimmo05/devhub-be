@@ -2,8 +2,12 @@ package com.devhub.user.entity;
 
 import com.devhub.common.entity.BaseEntity;
 import com.devhub.common.enums.UserRole;
+import com.devhub.security.jwt.entity.RefreshToken;
 import io.quarkus.elytron.security.common.BcryptUtil;
 import jakarta.persistence.*;
+
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "users")
@@ -28,6 +32,11 @@ public class User extends BaseEntity {
     @Column(name = "is_active")
     public boolean isActive = true;
 
+    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    public UserProfile profile;
+
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    public List<RefreshToken> refreshTokens = new ArrayList<>();
 
     public static User createNew(String email, String username, String password) {
         User user = new User();

@@ -47,6 +47,12 @@ public class AuthController {
         AuthResult result = authService.register(registerRequest);
         NewCookie refreshTokenCookie = cookieUtil.createRefreshTokenCookie(result.refreshToken);
 
+        try {
+            emailService.sendOtpToVerifyEmail(registerRequest.email);
+        } catch (Exception e) {
+            // Non blocchiamo la registrazione se l'invio dell'email fallisce
+        }
+
         AuthResponse response = new AuthResponse(result.accessToken, result.userProfile);
 
         return Response.ok(response).cookie(refreshTokenCookie).build();
