@@ -1,11 +1,6 @@
 package com.devhub.auth.controller;
 
-import com.devhub.auth.dto.AuthResponse;
-import com.devhub.auth.dto.AuthResult;
-import com.devhub.auth.dto.LoginRequest;
-import com.devhub.auth.dto.RegisterRequest;
-import com.devhub.auth.dto.ResetPasswordRequest;
-import com.devhub.auth.dto.SendOtpRequest;
+import com.devhub.auth.dto.*;
 import com.devhub.auth.service.AuthService;
 import com.devhub.auth.service.EmailService;
 import com.devhub.auth.util.CookieUtil;
