@@ -35,9 +35,7 @@ public class EmailService {
             throw new AuthException("Email does not exist: " + toEmail);
         }
 
-        if(otpService.hasActiveEmailVerificationRequest(toEmail)) {
-            throw new AuthException("A reset request is already in progress for this email");
-        }
+        // Sovrascriviamo sempre l'OTP esistente: permette il resend senza errori
         String otp = otpService.generateOtpWithType(toEmail, "EMAIL_CONFIRMATION");
         String bodyHtml = confirmEmailTemplate
                 .data("otp", otp)
