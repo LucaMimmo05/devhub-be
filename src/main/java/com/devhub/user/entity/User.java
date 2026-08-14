@@ -36,7 +36,7 @@ public class User extends BaseEntity {
     public UserProfile profile;
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
-    public List<RefreshToken> refreshTokens = new ArrayList<>();
+    public List<RefreshToken> refreshTokens = new ArrayList<RefreshToken>();
 
     public static User createNew(String email, String username, String password) {
         User user = new User();
