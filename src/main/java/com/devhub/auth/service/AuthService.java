@@ -54,6 +54,15 @@ public class AuthService {
             throw new WebApplicationException("EMAIL_NOT_VERIFIED", Response.Status.FORBIDDEN);
         }
 
+        return issueSession(existing);
+    }
+
+    /**
+     * Starts a session for an already authenticated user (password login, "Sign in with GitHub"):
+     * a single active refresh token per user, plus a fresh access token.
+     */
+    @Transactional
+    public AuthResult issueSession(User existing) {
         refreshTokenRepository.delete("user.id", existing.id);
 
         String accessToken =jwtService.generateAccessToken( "USER", existing.id);
