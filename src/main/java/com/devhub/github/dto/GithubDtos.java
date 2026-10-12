@@ -76,8 +76,27 @@ public final class GithubDtos {
             String authorLogin,
             String authorAvatarUrl,
             boolean draft,
+            String branch,
+            List<Label> labels,
+            String createdAt,
+            String updatedAt,
+            String htmlUrl) {}
+
+    public record Release(String tag, String name, String publishedAt, String htmlUrl) {}
+
+    /** A GitHub Actions run. status: queued|in_progress|completed; conclusion: success|failure|cancelled|skipped… */
+    public record WorkflowRun(
+            long id,
+            String name,
+            String title,
+            String status,
+            String conclusion,
+            String branch,
+            String event,
             String createdAt,
             String htmlUrl) {}
+
+    public record Contributor(String login, String avatarUrl, int contributions) {}
 
     public record RepoDetail(
             Repo repo,
@@ -85,11 +104,51 @@ public final class GithubDtos {
             Map<String, Long> languages,
             List<Commit> commits,
             List<Issue> issues,
-            List<PullRequest> pulls) {}
+            List<PullRequest> pulls,
+            /** README as Markdown, null when the repository has none. */
+            String readme,
+            Release latestRelease,
+            List<WorkflowRun> runs,
+            List<Contributor> contributors,
+            /** Commits per week over the last year, oldest first; empty while GitHub is still computing it. */
+            List<Integer> weeklyCommits) {}
+
+    /** An open pull request or issue from the viewer's inbox. */
+    public record InboxItem(
+            /** "PR" or "ISSUE". */
+            String kind,
+            int number,
+            String title,
+            String repo,
+            String htmlUrl,
+            String authorLogin,
+            String authorAvatarUrl,
+            List<Label> labels,
+            int comments,
+            boolean draft,
+            /** PRs: APPROVED | CHANGES_REQUESTED | REVIEW_REQUIRED | null. */
+            String reviewDecision,
+            /** PRs: SUCCESS | FAILURE | PENDING | null (no checks). */
+            String checks,
+            int additions,
+            int deletions,
+            String createdAt,
+            String updatedAt) {}
+
+    public record Inbox(List<InboxItem> reviewRequests, List<InboxItem> pullRequests, List<InboxItem> issues) {}
 
     public record ContributionDay(String date, int count, int level) {}
 
     public record ContributionWeek(List<ContributionDay> days) {}
 
-    public record Contributions(int total, List<ContributionWeek> weeks) {}
+    public record ContributionTotals(int commits, int pullRequests, int reviews, int issues, int privateContributions) {}
+
+    public record RepoContribution(String repo, int commits) {}
+
+    public record Contributions(
+            int total,
+            List<ContributionWeek> weeks,
+            ContributionTotals totals,
+            /** Repositories with the most commits by the viewer this year. */
+            List<RepoContribution> topRepos) {}
 }
