@@ -4,12 +4,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-DevHub Backend — REST API for a developer dashboard (projects, tasks, notes, CLI snippets) with JWT auth. Quarkus 3.30.5, Java 21, PostgreSQL (Hibernate ORM + Panache), Redis (OTP + session support), SmallRye JWT.
+DevHub Backend — REST API for a developer dashboard (projects, tasks, notes, CLI snippets) with JWT auth. Quarkus 3.30.5, Java 21, PostgreSQL (Hibernate ORM + Panache), SmallRye JWT.
 
 ## Commands
 
 ```bash
-# Dev mode (live reload) — requires Postgres + Redis reachable (see docker-compose.yml for local Postgres)
+# Dev mode (live reload) — requires Postgres reachable (see docker-compose.yml for local Postgres + Mailpit)
 ./mvnw quarkus:dev
 
 # Run tests
@@ -27,9 +27,9 @@ java -jar target/quarkus-app/quarkus-run.jar
 ./mvnw package -Dnative
 ```
 
-Local Postgres only: `docker-compose up -d` (starts `postgres:17` on 5432, db/user/pass all `devhub`). Redis is not included in docker-compose and must be provided separately (e.g. local install or a hosted instance) — `REDIS_HOST` etc. are required even in dev.
+Local services: `docker-compose up -d` starts `postgres:17` on 5432 (db/user/pass all `devhub`) and Mailpit (SMTP on 1025, web UI on http://localhost:8025). In the `%dev` profile the mailer points at Mailpit (no TLS, no auth), so OTP/verification emails land in the Mailpit inbox instead of Gmail; `MAIL_USERNAME`/`MAIL_PASSWORD` are only used in prod. There is no Redis: OTP codes are stored bcrypt-hashed in the `otp_codes` Postgres table (`auth/entity/OtpCode.java`, one row per email+type, 5-minute expiry), and `OtpService.cleanExpiredOtps` purges expired rows hourly.
 
-Required env vars are documented in `README.md` (Environment Variables section) — `POSTGRES_*`, `REDIS_HOST`/`REDIS_PASSWORD`, `MAIL_USERNAME`/`MAIL_PASSWORD`, `JWT_PUBLIC_KEY`/`JWT_PRIVATE_KEY` (prod only — dev reads `publicKey.pem`/`privateKey.pem` from `src/main/resources/`), `FRONTEND_ORIGIN`.
+Required env vars are documented in `README.md` (Environment Variables section) — `POSTGRES_*`, `MAIL_USERNAME`/`MAIL_PASSWORD`, `JWT_PUBLIC_KEY`/`JWT_PRIVATE_KEY` (prod only — dev reads `publicKey.pem`/`privateKey.pem` from `src/main/resources/`), `FRONTEND_ORIGIN`.
 
 There is no linter/formatter configured in this repo.
 
@@ -64,7 +64,7 @@ Global JAX-RS `ExceptionMapper`s in `common/error/` translate exceptions to JSON
 
 ### OTP / email verification
 
-`auth/service/OtpService.java` generates 6-digit OTPs, bcrypt-hashes them, and stores the hash in Redis under `otp:{email}:{type}` with a 5-minute TTL (`type` distinguishes flows, e.g. email verification vs password reset). `EmailService` sends the OTP via Quarkus Mailer (Gmail SMTP) using templates in `src/main/resources/templates/`.
+`auth/service/OtpService.java` generates 6-digit OTPs, bcrypt-hashes them, and stores the hash in the `otp_codes` table (one row per `email`+`type`, 5-minute `expires_at`) (`type` distinguishes flows, e.g. email verification vs password reset). `EmailService` sends the OTP via Quarkus Mailer (Gmail SMTP) using templates in `src/main/resources/templates/`.
 
 ### Entities
 

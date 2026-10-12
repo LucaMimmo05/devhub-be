@@ -13,10 +13,9 @@
 | ORM | Hibernate ORM + Panache |
 | Database | PostgreSQL (JDBC) |
 | Auth | SmallRye JWT (RS256, PEM keys) |
-| Session store | Redis (OTP + token blacklist) |
-| Email | Quarkus Mailer (Gmail SMTP) |
+| Email | Quarkus Mailer (Gmail SMTP in prod, Mailpit in dev) |
 | Validation | Hibernate Validator |
-| Scheduler | Quarkus Scheduler (JWT cleanup) |
+| Scheduler | Quarkus Scheduler (JWT + OTP cleanup) |
 
 ---
 
@@ -132,7 +131,7 @@ All authenticated endpoints require a valid `access_token` HttpOnly cookie obtai
 - Java 21
 - Maven 3.9+ (or use the included `./mvnw` wrapper)
 - PostgreSQL running locally
-- Redis running locally
+- Mailpit for local email (`docker compose up -d mailpit`, inbox at http://localhost:8025)
 
 ### Environment Variables
 
@@ -148,10 +147,6 @@ POSTGRES_PORT=5432        # optional, defaults to 5432
 # JWT (dev profile reads from .pem files; production reads from env vars)
 JWT_PUBLIC_KEY=<contents of publicKey.pem>
 JWT_PRIVATE_KEY=<contents of privateKey.pem>
-
-# Redis
-REDIS_HOST=redis://localhost:6379
-REDIS_PASSWORD=
 
 # Email (Gmail SMTP)
 MAIL_USERNAME=you@gmail.com
@@ -202,7 +197,6 @@ java -jar target/quarkus-app/quarkus-run.jar
 | Service | Provider | Notes |
 |---|---|---|
 | PostgreSQL | [Neon](https://neon.tech) | Free tier, no expiry |
-| Redis | [Upstash](https://upstash.com) | Free tier, TLS included |
 | SMTP | Gmail App Password | Free |
 
 ---
@@ -217,8 +211,6 @@ java -jar target/quarkus-app/quarkus-run.jar
 | `POSTGRES_USER` | Database username |
 | `POSTGRES_PASSWORD` | Database password |
 | `POSTGRES_DB` | Database name (dev only) |
-| `REDIS_HOST` | Redis connection URI (e.g. `rediss://host:port`) |
-| `REDIS_PASSWORD` | Redis password |
 | `MAIL_USERNAME` | Gmail address used as SMTP sender |
 | `MAIL_PASSWORD` | Gmail App Password |
 | `JWT_PUBLIC_KEY` | RSA public key PEM content (production) |
