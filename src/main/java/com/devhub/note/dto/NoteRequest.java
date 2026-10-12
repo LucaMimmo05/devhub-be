@@ -10,4 +10,8 @@ public class NoteRequest {
     public String title;
 
     public String content;
+
+    /** Null leaves it unchanged on update; an empty string removes it. */
+    @Size(max = 16)
+    public String emoji;
 }

@@ -41,9 +41,12 @@ public class NoteService {
         Note note = new Note();
         note.title = request.title;
         note.content = request.content;
+        note.emoji = blankToNull(request.emoji);
         note.userProfile = profile;
 
         noteRepository.persist(note);
+        // Timestamps are set on flush; flush so the response carries them.
+        noteRepository.flush();
         return toResponse(note);
     }
 
@@ -55,8 +58,11 @@ public class NoteService {
 
         if (request.title != null) note.title = request.title;
         if (request.content != null) note.content = request.content;
+        if (request.emoji != null) note.emoji = blankToNull(request.emoji);
 
         noteRepository.persist(note);
+        // @UpdateTimestamp is only applied on flush; flush now so the response carries the new updatedAt.
+        noteRepository.flush();
         return toResponse(note);
     }
 
@@ -73,8 +79,13 @@ public class NoteService {
         dto.id = note.id;
         dto.title = note.title;
         dto.content = note.content;
+        dto.emoji = note.emoji;
         dto.createdAt = note.getCreatedAt();
         dto.updatedAt = note.getUpdatedAt();
         return dto;
+    }
+
+    private static String blankToNull(String value) {
+        return value == null || value.isBlank() ? null : value.trim();
     }
 }
