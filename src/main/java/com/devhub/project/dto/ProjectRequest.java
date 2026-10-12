@@ -26,5 +26,10 @@ public class ProjectRequest {
     public Status status;
 
     public OffsetDateTime dueDate;
+    /**
+     * Updates only: a null dueDate means "leave unchanged", so removing the deadline
+     * needs this explicit flag. Ignored on create.
+     */
+    public boolean clearDueDate;
 
 }

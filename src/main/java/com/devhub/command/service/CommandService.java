@@ -41,6 +41,8 @@ public class CommandService {
         cmd.userProfile = profile;
 
         commandRepository.persist(cmd);
+        // Timestamps are set on flush; flush so the response carries them.
+        commandRepository.flush();
         return toResponse(cmd);
     }
 
@@ -56,6 +58,8 @@ public class CommandService {
         if (request.category != null) cmd.category = request.category;
 
         commandRepository.persist(cmd);
+        // Timestamps are set on flush; flush so the response carries them.
+        commandRepository.flush();
         return toResponse(cmd);
     }
 

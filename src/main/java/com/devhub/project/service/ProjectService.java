@@ -76,7 +76,8 @@ public class ProjectService {
         if (request.imageUrl != null) project.imgUrl = request.imageUrl;
         if (request.status != null) project.status = request.status;
         if (request.priority != null) project.priority = request.priority;
-        if (request.dueDate != null) project.dueDate = request.dueDate;
+        if (request.clearDueDate) project.dueDate = null;
+        else if (request.dueDate != null) project.dueDate = request.dueDate;
 
         projectRepository.persist(project);
         return toResponse(project);

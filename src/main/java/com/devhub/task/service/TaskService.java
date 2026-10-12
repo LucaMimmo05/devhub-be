@@ -78,6 +78,8 @@ public class TaskService {
         task.createdBy = profile;
 
         taskRepository.persist(task);
+        // Timestamps are set on flush; flush so the response carries them.
+        taskRepository.flush();
         return toResponse(task);
     }
 
@@ -96,7 +98,8 @@ public class TaskService {
         if (request.description != null) task.description = request.description;
         if (request.status != null) task.status = request.status;
         if (request.priority != null) task.priority = request.priority;
-        if (request.dueDate != null) task.dueDate = request.dueDate;
+        if (request.clearDueDate) task.dueDate = null;
+        else if (request.dueDate != null) task.dueDate = request.dueDate;
 
         if (request.assignedToProfileId != null) {
             UserProfile assigned = userProfileRepository.findById(request.assignedToProfileId);
@@ -104,6 +107,8 @@ public class TaskService {
         }
 
         taskRepository.persist(task);
+        // Timestamps are set on flush; flush so the response carries them.
+        taskRepository.flush();
         return toResponse(task);
     }
 
