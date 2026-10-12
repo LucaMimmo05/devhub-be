@@ -36,7 +36,9 @@ public class UserController {
         UUID userId = UUID.fromString(ctx.getUserPrincipal().getName());
         UserProfile profile = userProfileRepository.find("user.id", userId).firstResult();
         if (profile == null) throw new NotFoundException("Profile not found");
-        return toResponse(profile);
+        UserProfileResponse dto = toResponse(profile);
+        dto.email = profile.user.email;
+        return dto;
     }
 
     @PUT

@@ -26,5 +26,14 @@ public class ProjectRequest {
     public Status status;
 
     public OffsetDateTime dueDate;
+    /**
+     * Updates only: a null dueDate means "leave unchanged", so removing the deadline
+     * needs this explicit flag. Ignored on create.
+     */
+    public boolean clearDueDate;
+
+    /** "owner/name" links a GitHub repository; "" unlinks it; null leaves it unchanged. */
+    @Size(max = 150)
+    public String githubRepo;
 
 }

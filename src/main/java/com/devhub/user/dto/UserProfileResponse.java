@@ -8,4 +8,6 @@ public class UserProfileResponse {
     public String lastName;
     public String username;
     public String avatarUrl;
+    /** Only filled for the signed-in user's own profile (GET /users/me), never in search results. */
+    public String email;
 }

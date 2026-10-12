@@ -14,6 +14,10 @@ public class Note extends BaseEntity {
     @Column(name = "content", columnDefinition = "TEXT")
     public String content;
 
+    /** Optional icon shown next to the title; one emoji, possibly a multi-codepoint sequence. */
+    @Column(name = "emoji", length = 16)
+    public String emoji;
+
     @ManyToOne
     @JoinColumn(name = "user_profile_id", nullable = false)
     public UserProfile userProfile;

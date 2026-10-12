@@ -154,7 +154,18 @@ MAIL_PASSWORD=<Gmail App Password>
 
 # CORS
 FRONTEND_ORIGIN=http://localhost:5173
+
+# GitHub OAuth app (optional: leave unset to disable the GitHub integration)
+GITHUB_CLIENT_ID=<OAuth app client ID>
+GITHUB_CLIENT_SECRET=<OAuth app client secret>
+GITHUB_REDIRECT_URI=http://localhost:5173/github/callback   # optional, this is the default
+GITHUB_TOKEN_KEY=<random string>   # optional, encrypts stored GitHub tokens (defaults to the client secret)
 ```
+
+> **GitHub OAuth app**: create one at <https://github.com/settings/developers> → *New OAuth App*, with
+> *Homepage URL* = your frontend URL and *Authorization callback URL* = `<frontend>/github/callback`
+> (e.g. `http://localhost:5173/github/callback`). The same app serves both "Connect GitHub" and
+> "Sign in with GitHub". Requested scopes: `read:user user:email repo`.
 
 > **Dev profile**: place `publicKey.pem` and `privateKey.pem` in `src/main/resources/` — they are read automatically in dev mode.
 
@@ -214,6 +225,10 @@ java -jar target/quarkus-app/quarkus-run.jar
 | `MAIL_HOST` | SMTP host (default `smtp.gmail.com`) |
 | `MAIL_PORT` | SMTP port, STARTTLS (default `587`; Render free blocks 25/465/587, use e.g. `2525`) |
 | `MAIL_USERNAME` | SMTP login |
+| `GITHUB_CLIENT_ID` | GitHub OAuth app client ID (integration disabled when unset) |
+| `GITHUB_CLIENT_SECRET` | GitHub OAuth app client secret |
+| `GITHUB_REDIRECT_URI` | Frontend callback URL registered on the OAuth app (default `http://localhost:5173/github/callback`) |
+| `GITHUB_TOKEN_KEY` | Optional key for encrypting stored GitHub tokens (default: derived from the client secret) |
 | `MAIL_PASSWORD` | SMTP password / API key |
 | `MAIL_FROM` | Sender address (default `MAIL_USERNAME`; must be a verified sender for relay providers) |
 | `JWT_PUBLIC_KEY` | RSA public key PEM content (production) |

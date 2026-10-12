@@ -21,6 +21,7 @@ public class ProjectResponse {
     public Status status;
     public Priority priority;
     public OffsetDateTime dueDate;
+    public String githubRepo;
     public OffsetDateTime createdAt;
     public OffsetDateTime updatedAt;
 
