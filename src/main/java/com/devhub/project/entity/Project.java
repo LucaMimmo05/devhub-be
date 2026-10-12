@@ -39,6 +39,10 @@ public class Project extends BaseEntity {
     @Column(name = "img_url")
     public String imgUrl;
 
+    /** Linked GitHub repository as "owner/name", or null. */
+    @Column(name = "github_repo", length = 150)
+    public String githubRepo;
+
     @OneToMany(mappedBy = "project", cascade = CascadeType.ALL, orphanRemoval = true)
     public Set<ProjectMember> members = new HashSet<>();
 

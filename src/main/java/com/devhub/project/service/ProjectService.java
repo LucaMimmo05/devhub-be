@@ -1,5 +1,7 @@
 package com.devhub.project.service;
 
+import com.devhub.github.service.GithubService;
+
 import com.devhub.common.enums.Priority;
 import com.devhub.common.enums.ProjectRole;
 import com.devhub.common.enums.Status;
@@ -78,6 +80,9 @@ public class ProjectService {
         if (request.priority != null) project.priority = request.priority;
         if (request.clearDueDate) project.dueDate = null;
         else if (request.dueDate != null) project.dueDate = request.dueDate;
+        if (request.githubRepo != null) {
+            project.githubRepo = request.githubRepo.isBlank() ? null : GithubService.requireRepoName(request.githubRepo.trim());
+        }
 
         projectRepository.persist(project);
         return toResponse(project);
@@ -131,6 +136,9 @@ public class ProjectService {
         project.description = request.description;
         project.imgUrl = request.imageUrl;
         project.dueDate = request.dueDate;
+        if (request.githubRepo != null && !request.githubRepo.isBlank()) {
+            project.githubRepo = GithubService.requireRepoName(request.githubRepo.trim());
+        }
         project.createdAt = OffsetDateTime.now();
         project.updatedAt = OffsetDateTime.now();
 
@@ -170,6 +178,7 @@ public class ProjectService {
         dto.status = project.status != null ? project.status : Status.PENDING;
         dto.priority = project.priority != null ? project.priority : Priority.MEDIUM;
         dto.dueDate = project.dueDate;
+        dto.githubRepo = project.githubRepo;
         dto.createdAt = project.getCreatedAt();
         dto.updatedAt = project.getUpdatedAt();
 

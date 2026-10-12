@@ -32,4 +32,8 @@ public class ProjectRequest {
      */
     public boolean clearDueDate;
 
+    /** "owner/name" links a GitHub repository; "" unlinks it; null leaves it unchanged. */
+    @Size(max = 150)
+    public String githubRepo;
+
 }
