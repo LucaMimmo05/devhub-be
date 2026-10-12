@@ -71,6 +71,12 @@ public class GithubController {
     }
 
     @GET
+    @Path("/inbox")
+    public Inbox inbox(@Context SecurityContext ctx) {
+        return github.inbox(userId(ctx));
+    }
+
+    @GET
     @Path("/contributions")
     public Contributions contributions(@Context SecurityContext ctx) {
         return github.contributions(userId(ctx));

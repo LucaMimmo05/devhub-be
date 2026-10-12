@@ -23,6 +23,11 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.time.OffsetDateTime;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.function.Supplier;
 import java.util.regex.Pattern;
 
 @ApplicationScoped
@@ -157,28 +162,99 @@ public class GithubService {
     public RepoDetail repo(UUID userId, String owner, String name) {
         String full = requireRepoName(owner + "/" + name);
         String token = token(userId);
-        Repo repo = toRepo(api.get(token, "/repos/" + full));
+        String base = "/repos/" + full;
 
-        Map<String, Long> languages = new LinkedHashMap<>();
-        api.get(token, "/repos/" + full + "/languages").fields()
-                .forEachRemaining(e -> languages.put(e.getKey(), e.getValue().asLong()));
-
-        List<Commit> commits = new ArrayList<>();
-        api.get(token, "/repos/" + full + "/commits?per_page=15").forEach(c -> commits.add(toCommit(c, full)));
-
-        List<Issue> issues = new ArrayList<>();
-        // The issues endpoint also returns PRs; keep real issues only.
-        api.get(token, "/repos/" + full + "/issues?state=open&per_page=30").forEach(i -> {
-            if (!i.has("pull_request")) issues.add(toIssue(i));
+        // Everything after the repo itself is independent: fetch in parallel, and let the extras
+        // (README, release, CI, stats) fail quietly so one missing piece doesn't break the page.
+        var repoF = async(() -> toRepo(api.get(token, base)));
+        var languagesF = async(() -> {
+            Map<String, Long> languages = new LinkedHashMap<>();
+            api.get(token, base + "/languages").fields().forEachRemaining(e -> languages.put(e.getKey(), e.getValue().asLong()));
+            return languages;
         });
+        var commitsF = async(() -> {
+            List<Commit> commits = new ArrayList<>();
+            api.get(token, base + "/commits?per_page=30").forEach(c -> commits.add(toCommit(c, full)));
+            return commits;
+        });
+        var issuesF = async(() -> {
+            List<Issue> issues = new ArrayList<>();
+            // The issues endpoint also returns PRs; keep real issues only.
+            api.get(token, base + "/issues?state=open&per_page=50").forEach(i -> {
+                if (!i.has("pull_request")) issues.add(toIssue(i));
+            });
+            return issues.size() > 30 ? issues.subList(0, 30) : issues;
+        });
+        var pullsF = async(() -> {
+            List<PullRequest> pulls = new ArrayList<>();
+            api.get(token, base + "/pulls?state=open&per_page=30").forEach(p -> pulls.add(new PullRequest(
+                    p.path("number").asInt(), p.path("title").asText(),
+                    p.path("user").path("login").asText(null), p.path("user").path("avatar_url").asText(null),
+                    p.path("draft").asBoolean(false), p.path("head").path("ref").asText(null), labels(p),
+                    p.path("created_at").asText(null), p.path("updated_at").asText(null), p.path("html_url").asText(null))));
+            return pulls;
+        });
+        var readmeF = async(() -> optional(() -> readme(api.get(token, base + "/readme")), null));
+        var releaseF = async(() -> optional(() -> {
+            JsonNode r = api.get(token, base + "/releases/latest");
+            return new Release(r.path("tag_name").asText(), blankToNull(r.path("name").asText(null)),
+                    r.path("published_at").asText(null), r.path("html_url").asText(null));
+        }, null));
+        var runsF = async(() -> optional(() -> {
+            List<WorkflowRun> runs = new ArrayList<>();
+            api.get(token, base + "/actions/runs?per_page=6").path("workflow_runs").forEach(r -> runs.add(new WorkflowRun(
+                    r.path("id").asLong(), r.path("name").asText(null), r.path("display_title").asText(null),
+                    r.path("status").asText(null), r.path("conclusion").asText(null), r.path("head_branch").asText(null),
+                    r.path("event").asText(null), r.path("created_at").asText(null), r.path("html_url").asText(null))));
+            return runs;
+        }, List.<WorkflowRun>of()));
+        var contributorsF = async(() -> optional(() -> {
+            List<Contributor> people = new ArrayList<>();
+            api.get(token, base + "/contributors?per_page=12").forEach(c -> people.add(new Contributor(
+                    c.path("login").asText(), c.path("avatar_url").asText(null), c.path("contributions").asInt())));
+            return people;
+        }, List.<Contributor>of()));
+        var weeklyF = async(() -> optional(() -> {
+            // 202 while GitHub computes the stats: the body is empty and we show nothing this time.
+            List<Integer> weeks = new ArrayList<>();
+            api.get(token, base + "/stats/participation").path("all").forEach(n -> weeks.add(n.asInt()));
+            return weeks;
+        }, List.<Integer>of()));
 
-        List<PullRequest> pulls = new ArrayList<>();
-        api.get(token, "/repos/" + full + "/pulls?state=open&per_page=15").forEach(p -> pulls.add(new PullRequest(
-                p.path("number").asInt(), p.path("title").asText(),
-                p.path("user").path("login").asText(null), p.path("user").path("avatar_url").asText(null),
-                p.path("draft").asBoolean(false), p.path("created_at").asText(null), p.path("html_url").asText(null))));
+        return new RepoDetail(join(repoF), join(languagesF), join(commitsF), join(issuesF), join(pullsF),
+                join(readmeF), join(releaseF), join(runsF), join(contributorsF), join(weeklyF));
+    }
 
-        return new RepoDetail(repo, languages, commits, issues.size() > 20 ? issues.subList(0, 20) : issues, pulls);
+    /**
+     * Open pull requests waiting for the viewer's review, the viewer's own open pull requests, and open
+     * issues assigned to them, with review and CI state. One GraphQL call.
+     */
+    public Inbox inbox(UUID userId) {
+        String login = connection(userId).login;
+        String query = """
+                query($reviews: String!, $mine: String!, $assigned: String!) {
+                  reviews: search(query: $reviews, type: ISSUE, first: 25) { nodes { ...pr } }
+                  mine: search(query: $mine, type: ISSUE, first: 25) { nodes { ...pr } }
+                  assigned: search(query: $assigned, type: ISSUE, first: 25) { nodes { ...issue } }
+                }
+                fragment pr on PullRequest {
+                  number title url isDraft createdAt updatedAt additions deletions reviewDecision
+                  repository { nameWithOwner } author { login avatarUrl } comments { totalCount }
+                  labels(first: 5) { nodes { name color } }
+                  commits(last: 1) { nodes { commit { statusCheckRollup { state } } } }
+                }
+                fragment issue on Issue {
+                  number title url createdAt updatedAt
+                  repository { nameWithOwner } author { login avatarUrl } comments { totalCount }
+                  labels(first: 5) { nodes { name color } }
+                }""";
+        String suffix = " archived:false sort:updated-desc";
+        JsonNode data = api.graphql(token(userId), query, Map.of(
+                "reviews", "is:open is:pr review-requested:" + login + suffix,
+                "mine", "is:open is:pr author:" + login + suffix,
+                "assigned", "is:open is:issue assignee:" + login + suffix));
+        return new Inbox(inboxItems(data.path("reviews"), "PR"), inboxItems(data.path("mine"), "PR"),
+                inboxItems(data.path("assigned"), "ISSUE"));
     }
 
     /** The user's own latest commits across their most recently pushed repositories. */
@@ -204,15 +280,22 @@ public class GithubService {
         return all.size() > 30 ? all.subList(0, 30) : all;
     }
 
-    /** The contribution calendar shown on GitHub profiles (last 12 months). */
+    /** The contribution calendar shown on GitHub profiles (last 12 months), with totals per kind. */
     public Contributions contributions(UUID userId) {
         String query = """
-                query { viewer { contributionsCollection { contributionCalendar {
-                  totalContributions
-                  weeks { contributionDays { date contributionCount contributionLevel } }
-                } } } }""";
-        JsonNode calendar = api.graphql(token(userId), query, Map.of())
-                .path("viewer").path("contributionsCollection").path("contributionCalendar");
+                query { viewer { contributionsCollection {
+                  totalCommitContributions totalPullRequestContributions
+                  totalPullRequestReviewContributions totalIssueContributions restrictedContributionsCount
+                  commitContributionsByRepository(maxRepositories: 6) {
+                    repository { nameWithOwner } contributions { totalCount }
+                  }
+                  contributionCalendar {
+                    totalContributions
+                    weeks { contributionDays { date contributionCount contributionLevel } }
+                  }
+                } } }""";
+        JsonNode collection = api.graphql(token(userId), query, Map.of()).path("viewer").path("contributionsCollection");
+        JsonNode calendar = collection.path("contributionCalendar");
         List<ContributionWeek> weeks = new ArrayList<>();
         calendar.path("weeks").forEach(w -> {
             List<ContributionDay> days = new ArrayList<>();
@@ -220,7 +303,16 @@ public class GithubService {
                     d.path("date").asText(), d.path("contributionCount").asInt(), level(d.path("contributionLevel").asText()))));
             weeks.add(new ContributionWeek(days));
         });
-        return new Contributions(calendar.path("totalContributions").asInt(), weeks);
+        ContributionTotals totals = new ContributionTotals(
+                collection.path("totalCommitContributions").asInt(),
+                collection.path("totalPullRequestContributions").asInt(),
+                collection.path("totalPullRequestReviewContributions").asInt(),
+                collection.path("totalIssueContributions").asInt(),
+                collection.path("restrictedContributionsCount").asInt());
+        List<RepoContribution> topRepos = new ArrayList<>();
+        collection.path("commitContributionsByRepository").forEach(r -> topRepos.add(new RepoContribution(
+                r.path("repository").path("nameWithOwner").asText(), r.path("contributions").path("totalCount").asInt())));
+        return new Contributions(calendar.path("totalContributions").asInt(), weeks, totals, topRepos);
     }
 
     /** Validates "owner/name" before it's stored on a project or put into a GitHub URL. */
@@ -319,6 +411,70 @@ public class GithubService {
         return secrets.decrypt(connection(userId).encryptedToken);
     }
 
+    private static final ExecutorService IO = Executors.newVirtualThreadPerTaskExecutor();
+    private static final int README_LIMIT = 200_000;
+
+    private static <T> CompletableFuture<T> async(Supplier<T> work) {
+        return CompletableFuture.supplyAsync(work, IO);
+    }
+
+    private static <T> T join(CompletableFuture<T> future) {
+        try {
+            return future.join();
+        } catch (CompletionException e) {
+            if (e.getCause() instanceof RuntimeException cause) throw cause;
+            throw e;
+        }
+    }
+
+    /** For optional extras: a missing resource or a GitHub error yields the fallback; an expired token still surfaces. */
+    private static <T> T optional(Supplier<T> work, T fallback) {
+        try {
+            return work.get();
+        } catch (GithubReauthException e) {
+            throw e;
+        } catch (WebApplicationException e) {
+            return fallback;
+        }
+    }
+
+    private static String readme(JsonNode node) {
+        String content = node.path("content").asText(null);
+        if (content == null) return null;
+        String text = new String(Base64.getMimeDecoder().decode(content), StandardCharsets.UTF_8);
+        return text.length() > README_LIMIT ? text.substring(0, README_LIMIT) : text;
+    }
+
+    private static List<Label> labels(JsonNode node) {
+        List<Label> labels = new ArrayList<>();
+        JsonNode list = node.path("labels");
+        (list.has("nodes") ? list.path("nodes") : list)
+                .forEach(l -> labels.add(new Label(l.path("name").asText(), l.path("color").asText(null))));
+        return labels;
+    }
+
+    private static List<InboxItem> inboxItems(JsonNode search, String kind) {
+        List<InboxItem> items = new ArrayList<>();
+        search.path("nodes").forEach(n -> {
+            if (!n.has("number")) return; // a search hit of another type
+            JsonNode rollup = n.path("commits").path("nodes").path(0).path("commit").path("statusCheckRollup");
+            String checks = switch (rollup.path("state").asText("")) {
+                case "SUCCESS" -> "SUCCESS";
+                case "FAILURE", "ERROR" -> "FAILURE";
+                case "PENDING", "EXPECTED" -> "PENDING";
+                default -> null;
+            };
+            items.add(new InboxItem(kind, n.path("number").asInt(), n.path("title").asText(),
+                    n.path("repository").path("nameWithOwner").asText(), n.path("url").asText(null),
+                    n.path("author").path("login").asText(null), n.path("author").path("avatarUrl").asText(null),
+                    labels(n), n.path("comments").path("totalCount").asInt(), n.path("isDraft").asBoolean(false),
+                    blankToNull(n.path("reviewDecision").asText(null)), checks,
+                    n.path("additions").asInt(), n.path("deletions").asInt(),
+                    n.path("createdAt").asText(null), n.path("updatedAt").asText(null)));
+        });
+        return items;
+    }
+
     private static Repo toRepo(JsonNode r) {
         List<String> topics = new ArrayList<>();
         r.path("topics").forEach(t -> topics.add(t.asText()));
@@ -347,10 +503,8 @@ public class GithubService {
     }
 
     private static Issue toIssue(JsonNode i) {
-        List<Label> labels = new ArrayList<>();
-        i.path("labels").forEach(l -> labels.add(new Label(l.path("name").asText(), l.path("color").asText(null))));
         return new Issue(i.path("number").asInt(), i.path("title").asText(), i.path("state").asText(),
-                i.path("user").path("login").asText(null), i.path("user").path("avatar_url").asText(null), labels,
+                i.path("user").path("login").asText(null), i.path("user").path("avatar_url").asText(null), labels(i),
                 i.path("comments").asInt(), i.path("created_at").asText(null), i.path("updated_at").asText(null),
                 i.path("html_url").asText(null));
     }
