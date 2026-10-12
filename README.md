@@ -211,8 +211,11 @@ java -jar target/quarkus-app/quarkus-run.jar
 | `POSTGRES_USER` | Database username |
 | `POSTGRES_PASSWORD` | Database password |
 | `POSTGRES_DB` | Database name (dev only) |
-| `MAIL_USERNAME` | Gmail address used as SMTP sender |
-| `MAIL_PASSWORD` | Gmail App Password |
+| `MAIL_HOST` | SMTP host (default `smtp.gmail.com`) |
+| `MAIL_PORT` | SMTP port, STARTTLS (default `587`; Render free blocks 25/465/587, use e.g. `2525`) |
+| `MAIL_USERNAME` | SMTP login |
+| `MAIL_PASSWORD` | SMTP password / API key |
+| `MAIL_FROM` | Sender address (default `MAIL_USERNAME`; must be a verified sender for relay providers) |
 | `JWT_PUBLIC_KEY` | RSA public key PEM content (production) |
 | `JWT_PRIVATE_KEY` | RSA private key PEM content (production) |
 
