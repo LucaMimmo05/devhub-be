@@ -31,6 +31,12 @@ public class UserService {
             return;
         }
 
+        // The GitHub link references the profile without a cascade: remove it first.
+        userProfileRepository.getEntityManager()
+                .createQuery("DELETE FROM GithubConnection g WHERE g.userProfile = :profile")
+                .setParameter("profile", profile)
+                .executeUpdate();
+
         // Nullify tasks assigned to this profile (tasks created by others)
         // so we don't violate FK constraints when cascade deletes createdBy tasks
         userProfileRepository.getEntityManager()
