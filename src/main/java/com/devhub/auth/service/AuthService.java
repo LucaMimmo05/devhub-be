@@ -21,6 +21,7 @@ import jakarta.transaction.Transactional;
 import jakarta.ws.rs.WebApplicationException;
 import jakarta.ws.rs.core.Response;
 
+import java.time.Duration;
 import java.time.Instant;
 
 @ApplicationScoped
@@ -39,8 +40,15 @@ public class AuthService {
     @Inject
     UserProfileRepository userProfileRepository;
 
+    @Inject
+    RateLimiter rateLimiter;
+
+    private static final int LOGINS_PER_EMAIL = 10;
+    private static final Duration LOGIN_WINDOW = Duration.ofMinutes(15);
+
     @Transactional
     public AuthResult login(LoginRequest request) {
+        rateLimiter.check("login:" + RateLimiter.normalize(request.email), LOGINS_PER_EMAIL, LOGIN_WINDOW);
         User existing = userRepository.findByEmail(request.email)
                 .orElseThrow(() -> new AuthException("User not found"));
 

@@ -3,6 +3,7 @@ package com.devhub.auth.controller;
 import com.devhub.auth.dto.*;
 import com.devhub.auth.service.AuthService;
 import com.devhub.auth.service.EmailService;
+import com.devhub.auth.util.RateLimited;
 import com.devhub.auth.util.CookieUtil;
 import jakarta.inject.Inject;
 import jakarta.validation.Valid;
@@ -27,6 +28,7 @@ public class AuthController {
 
     @POST
     @Path("/login")
+    @RateLimited
     public Response login(@Valid LoginRequest loginRequest) {
         AuthResult result = authService.login(loginRequest);
         NewCookie refreshTokenCookie = cookieUtil.createRefreshTokenCookie(result.refreshToken);
@@ -82,6 +84,7 @@ public class AuthController {
 
     @POST
     @Path("/forgot-password")
+    @RateLimited
     public Response forgotPassword(@Valid SendOtpRequest request) {
         emailService.sendPasswordResetOtp(request.email);
         // Risposta generica per non rivelare se l'email esiste
@@ -90,6 +93,7 @@ public class AuthController {
 
     @POST
     @Path("/reset-password")
+    @RateLimited
     public Response resetPassword(@Valid ResetPasswordRequest request) {
         emailService.verifyOtpAndResetPassword(request.email, request.otp, request.newPassword);
         return Response.ok().build();
@@ -97,6 +101,7 @@ public class AuthController {
 
     @POST
     @Path("/verify-reset-otp")
+    @RateLimited
     public Response verifyResetOtp(@Valid VerifyOtpRequest request) {
         emailService.verifyResetOtp(request.email, request.otp);
         return Response.ok().build();
@@ -104,6 +109,7 @@ public class AuthController {
 
     @POST
     @Path("/resend-reset-otp")
+    @RateLimited
     public Response resendResetOtp(@Valid SendOtpRequest request) {
         emailService.sendPasswordResetOtp(request.email);
         return Response.ok().build();

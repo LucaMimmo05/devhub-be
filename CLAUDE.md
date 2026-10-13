@@ -16,8 +16,8 @@ DevHub Backend — REST API for a developer dashboard (projects, tasks, notes, C
 ./mvnw test
 
 # Run a single test class / method
-./mvnw test -Dtest=ExampleResourceTest
-./mvnw test -Dtest=ExampleResourceTest#testMethodName
+./mvnw test -Dtest=AuthRateLimitTest
+./mvnw test -Dtest=AuthRateLimitTest#loginsAreLimitedPerEmail
 
 # Build (JVM)
 ./mvnw -B clean package -DskipTests
@@ -60,17 +60,31 @@ There's no central permission/ACL layer — each service method inline-checks ac
 
 ### Error handling
 
-Global JAX-RS `ExceptionMapper`s in `common/error/` translate exceptions to JSON bodies: `AuthExceptionMapper` (custom `AuthException` → 401, `{type: "AUTH_ERROR", message}`), `GlobalExceptionMapper` (Bean Validation `ConstraintViolationException` → 400, `{type: "VALIDATION_ERROR", errors: {field: message}}`), `WebApplicationExceptionMapper` (any `WebApplicationException`, e.g. `NotFoundException`/`ForbiddenException` → its status code, `{message, status}`). Raise these standard exception types from services/controllers rather than building `Response` objects by hand for error cases.
+Global JAX-RS `ExceptionMapper`s in `common/error/` translate exceptions to JSON bodies: `AuthExceptionMapper` (custom `AuthException` → 401, `{type: "AUTH_ERROR", message}`), `GlobalExceptionMapper` (Bean Validation `ConstraintViolationException` → 400, `{type: "VALIDATION_ERROR", errors: {field: message}}`), `WebApplicationExceptionMapper` (any `WebApplicationException`, e.g. `NotFoundException`/`ForbiddenException` → its status code, `{message, status}`), `TooManyRequestsExceptionMapper` (`TooManyRequestsException` → 429, `{type: "RATE_LIMITED", message, status}` plus `Retry-After` when known). Raise these standard exception types from services/controllers rather than building `Response` objects by hand for error cases.
 
 ### OTP / email verification
 
 `auth/service/OtpService.java` generates 6-digit OTPs, bcrypt-hashes them, and stores the hash in the `otp_codes` table (one row per `email`+`type`, 5-minute `expires_at`) (`type` distinguishes flows, e.g. email verification vs password reset). `EmailService` sends the OTP via Quarkus Mailer (Gmail SMTP) using templates in `src/main/resources/templates/`.
+
+Wrong codes are counted: `otp_codes.attempts` is incremented on every mismatch (both `verifyOtpWithType` and the non-consuming `peekOtpWithType` used by `/auth/verify-reset-otp`), and at `OtpService.MAX_ATTEMPTS` (5) the row is deleted, so a new code must be requested. Both methods return an `OtpCheck` (`VALID`/`INVALID`/`LOCKED`) instead of throwing, because an exception inside the `@Transactional` method would roll the increment back; `EmailService` maps `LOCKED` to 429 `OTP_LOCKED`.
+
+### Rate limiting
+
+`auth/service/RateLimiter.java` is an in-memory fixed-window counter (single instance only: counters reset on restart and are not shared across instances). Two layers:
+- **Per IP:** `@RateLimited` (`auth/util/`) is a JAX-RS name binding; `RateLimitFilter` gives each client IP 30 requests per 15 minutes shared across every annotated endpoint (login, forgot/reset/verify-reset/resend-reset, `/email/resend`, `/email/verify`). With `devhub.rate-limit.trust-forwarded-for=true` (prod, behind Render) the IP is the **last** `X-Forwarded-For` entry; otherwise the socket address.
+- **Per email**, in the services: login 10 per 15 minutes (`AuthService.login`), code sends 3 per 15 minutes across both flows (`EmailService`).
+
+Exceeding a limit answers 429 `TOO_MANY_ATTEMPTS` with `Retry-After`. Annotate new unauthenticated auth endpoints with `@RateLimited`.
 
 ### Entities
 
 All entities extend `common/entity/BaseEntity.java` (`@MappedSuperclass`): UUID primary key (`GenerationType.UUID`), `createdAt`/`updatedAt` auto-managed via Hibernate `@CreationTimestamp`/`@UpdateTimestamp`. Shared enums live in `common/enums/` (`Status`, `Priority`, `ProjectRole`, `UserRole`) and are persisted as `EnumType.STRING`.
 
 Hibernate schema is auto-migrated (`quarkus.hibernate-orm.schema-management.strategy=update`) — there is no separate migration tool (no Flyway/Liquibase). `src/main/resources/import.sql` is present but currently inert (fully commented out).
+
+### Tests
+
+`./mvnw test` runs `@QuarkusTest`s against a separate local database, `devhub_test`, recreated on every run (`%test` profile: `drop-and-create`, mock mailer — read sent codes via `MockMailbox`). It must exist once: `CREATE DATABASE devhub_test OWNER devhub;` as a Postgres superuser. Never point the test profile at the dev database. Tests that hit rate-limited endpoints call `RateLimiter.clear()` in `@BeforeEach`.
 
 ### Profile bootstrap quirk
 

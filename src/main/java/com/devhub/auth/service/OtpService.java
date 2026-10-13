@@ -21,6 +21,9 @@ public class OtpService {
 
     private static final SecureRandom random = new SecureRandom();
     private static final Duration OTP_EXPIRATION = Duration.ofMinutes(5);
+    public static final int MAX_ATTEMPTS = 5;
+
+    public enum OtpCheck { VALID, INVALID, LOCKED }
 
 
     @Transactional
@@ -43,22 +46,40 @@ public class OtpService {
 
 
     /** Verifica l'OTP senza eliminarlo (usato per lo step intermedio di conferma). */
-    public boolean peekOtpWithType(String email, String otp, String type) {
-        return otpCodeRepository.findValid(email, type)
-                .map(code -> BcryptUtil.matches(otp, code.codeHash))
-                .orElse(false);
+    @Transactional
+    public OtpCheck peekOtpWithType(String email, String otp, String type) {
+        return check(email, otp, type, false);
     }
 
     @Transactional
-    public boolean verifyOtpWithType(String email, String otp, String type) {
-        Optional<OtpCode> code = otpCodeRepository.findValid(email, type);
+    public OtpCheck verifyOtpWithType(String email, String otp, String type) {
+        return check(email, otp, type, true);
+    }
 
-        if (code.isEmpty() || !BcryptUtil.matches(otp, code.get().codeHash)) {
-            return false;
+    /**
+     * Ogni codice sbagliato incrementa {@code attempts}; al MAX_ATTEMPTS-esimo il codice viene cancellato
+     * e ne serve uno nuovo. Restituisce un esito invece di lanciare: un'eccezione annullerebbe l'incremento.
+     */
+    private OtpCheck check(String email, String otp, String type, boolean consume) {
+        Optional<OtpCode> found = otpCodeRepository.findValid(email, type);
+        if (found.isEmpty()) {
+            return OtpCheck.INVALID;
         }
 
-        otpCodeRepository.delete(code.get());
-        return true;
+        OtpCode code = found.get();
+        if (BcryptUtil.matches(otp, code.codeHash)) {
+            if (consume) {
+                otpCodeRepository.delete(code);
+            }
+            return OtpCheck.VALID;
+        }
+
+        code.attempts++;
+        if (code.attempts >= MAX_ATTEMPTS) {
+            otpCodeRepository.delete(code);
+            return OtpCheck.LOCKED;
+        }
+        return OtpCheck.INVALID;
     }
 
     public boolean hasActiveEmailVerificationRequest(String email) {
