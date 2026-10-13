@@ -13,6 +13,7 @@ import com.devhub.user.repository.UserProfileRepository;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
+import jakarta.ws.rs.BadRequestException;
 import jakarta.ws.rs.ForbiddenException;
 import jakarta.ws.rs.NotFoundException;
 
@@ -42,9 +43,7 @@ public class TaskService {
         Project project = projectRepository.findById(projectId);
         if (project == null) throw new NotFoundException("Project not found");
 
-        boolean isMember = project.owner.user.id.equals(requestingUserId) ||
-                project.members.stream().anyMatch(pm -> pm.userProfile.user.id.equals(requestingUserId));
-        if (!isMember) throw new ForbiddenException("Access denied");
+        if (!isOwnerOrMember(project, requestingUserId)) throw new ForbiddenException("Access denied");
 
         return taskRepository.findByProjectId(projectId, status, priority, search)
                 .stream()
@@ -66,14 +65,14 @@ public class TaskService {
 
         Project project = projectRepository.findById(request.projectId);
         if (project == null) throw new NotFoundException("Project not found");
+        if (!isOwnerOrMember(project, requestingUserId)) {
+            throw new ForbiddenException("Only the project owner or members can add tasks");
+        }
         task.project = project;
 
-        if (request.assignedToProfileId != null) {
-            UserProfile assigned = userProfileRepository.findById(request.assignedToProfileId);
-            task.assignedTo = assigned;
-        } else {
-            task.assignedTo = profile;
-        }
+        task.assignedTo = request.assignedToProfileId != null
+                ? requireAssignable(project, request.assignedToProfileId)
+                : profile;
 
         task.createdBy = profile;
 
@@ -102,8 +101,7 @@ public class TaskService {
         else if (request.dueDate != null) task.dueDate = request.dueDate;
 
         if (request.assignedToProfileId != null) {
-            UserProfile assigned = userProfileRepository.findById(request.assignedToProfileId);
-            if (assigned != null) task.assignedTo = assigned;
+            task.assignedTo = requireAssignable(task.project, request.assignedToProfileId);
         }
 
         taskRepository.persist(task);
@@ -123,6 +121,26 @@ public class TaskService {
         if (!isCreator && !isProjectOwner) throw new ForbiddenException("Access denied");
 
         taskRepository.delete(task);
+    }
+
+    private static boolean isOwnerOrMember(Project project, UUID userId) {
+        return project.owner.user.id.equals(userId)
+                || project.members.stream().anyMatch(pm -> pm.userProfile.user.id.equals(userId));
+    }
+
+    /** Tasks can only be assigned to the project owner or one of its members. */
+    private static UserProfile requireAssignable(Project project, UUID profileId) {
+        if (project == null) {
+            throw new BadRequestException("Tasks without a project can't be reassigned");
+        }
+        if (project.owner.id.equals(profileId)) {
+            return project.owner;
+        }
+        return project.members.stream()
+                .map(pm -> pm.userProfile)
+                .filter(member -> member.id.equals(profileId))
+                .findFirst()
+                .orElseThrow(() -> new BadRequestException("Assignee must be the project owner or a member"));
     }
 
     private TaskResponse toResponse(Task task) {
