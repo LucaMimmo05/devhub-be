@@ -7,6 +7,7 @@ import com.devhub.task.dto.TaskResponse;
 import com.devhub.task.service.TaskService;
 import io.quarkus.security.Authenticated;
 import jakarta.inject.Inject;
+import jakarta.validation.Valid;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.MediaType;
@@ -36,7 +37,7 @@ public class ProjectController {
     }
 
     @POST
-    public Response createProject(@Context SecurityContext ctx, ProjectRequest request) {
+    public Response createProject(@Context SecurityContext ctx, @Valid ProjectRequest request) {
         String userId = ctx.getUserPrincipal().getName();
         ProjectResponse response = projectService.createProject(request, UUID.fromString(userId));
         return Response.status(Response.Status.CREATED).entity(response).build();
@@ -51,7 +52,7 @@ public class ProjectController {
 
     @PUT
     @Path("/{projectId}")
-    public ProjectResponse updateProject(@Context SecurityContext ctx, @PathParam("projectId") UUID projectId, ProjectRequest request) {
+    public ProjectResponse updateProject(@Context SecurityContext ctx, @PathParam("projectId") UUID projectId, @Valid ProjectRequest request) {
         UUID userId = UUID.fromString(ctx.getUserPrincipal().getName());
         return projectService.updateProject(projectId, request, userId);
     }

@@ -60,7 +60,7 @@ There's no central permission/ACL layer — each service method inline-checks ac
 
 ### Error handling
 
-Global JAX-RS `ExceptionMapper`s in `common/error/` translate exceptions to JSON bodies: `AuthExceptionMapper` (custom `AuthException` → 401, `{type: "AUTH_ERROR", message}`), `GlobalExceptionMapper` (Bean Validation `ConstraintViolationException` → 400, `{type: "VALIDATION_ERROR", errors: {field: message}}`), `WebApplicationExceptionMapper` (any `WebApplicationException`, e.g. `NotFoundException`/`ForbiddenException` → its status code, `{message, status}`), `TooManyRequestsExceptionMapper` (`TooManyRequestsException` → 429, `{type: "RATE_LIMITED", message, status}` plus `Retry-After` when known). Raise these standard exception types from services/controllers rather than building `Response` objects by hand for error cases.
+Global JAX-RS `ExceptionMapper`s in `common/error/` translate exceptions to JSON bodies: `AuthExceptionMapper` (custom `AuthException` → 401, `{type: "AUTH_ERROR", message}`), `GlobalExceptionMapper` (Bean Validation `ConstraintViolationException` → 400, `{type: "VALIDATION_ERROR", errors: {field: message}, message}` — first violation per field, `message` repeats the first one; request DTOs need `@Valid` on the controller parameter or their constraints are never checked), `WebApplicationExceptionMapper` (any `WebApplicationException`, e.g. `NotFoundException`/`ForbiddenException` → its status code, `{message, status}`), `TooManyRequestsExceptionMapper` (`TooManyRequestsException` → 429, `{type: "RATE_LIMITED", message, status}` plus `Retry-After` when known). Raise these standard exception types from services/controllers rather than building `Response` objects by hand for error cases.
 
 ### OTP / email verification
 
@@ -80,11 +80,18 @@ Exceeding a limit answers 429 `TOO_MANY_ATTEMPTS` with `Retry-After`. Annotate n
 
 All entities extend `common/entity/BaseEntity.java` (`@MappedSuperclass`): UUID primary key (`GenerationType.UUID`), `createdAt`/`updatedAt` auto-managed via Hibernate `@CreationTimestamp`/`@UpdateTimestamp`. Shared enums live in `common/enums/` (`Status`, `Priority`, `ProjectRole`, `UserRole`) and are persisted as `EnumType.STRING`.
 
-Hibernate schema is auto-migrated (`quarkus.hibernate-orm.schema-management.strategy=update`) — there is no separate migration tool (no Flyway/Liquibase). `src/main/resources/import.sql` is present but currently inert (fully commented out).
+### Migrations (Flyway)
+
+The schema is owned by Flyway (`quarkus-flyway`, scripts in `src/main/resources/db/migration`), applied at startup (`quarkus.flyway.migrate-at-start=true`). Hibernate runs with `schema-management.strategy=validate`: it fails startup if an entity maps to a missing table/column or an incompatible type, but it does **not** compare `varchar` lengths, so keep `@Column(length)`, the DTO `@Size(max)` and the migration in sync by hand.
+- `V1__baseline.sql` is the schema Hibernate generated before Flyway (October 2026). Databases that existed before Flyway (dev, prod) are baselined at version 1 (`baseline-on-migrate=true`, `baseline-version=1`) and only receive V2+; an empty database runs V1 too.
+- New change = new `V<n>__description.sql`; never edit one that has already run. Prefer re-runnable statements (`ADD COLUMN IF NOT EXISTS`, widening `ALTER ... TYPE`).
+- `%test` sets `clean-at-start=true` (only there, against `devhub_test`), so every test run replays all migrations on an empty schema.
+
+`src/main/resources/import.sql` is present but currently inert (fully commented out).
 
 ### Tests
 
-`./mvnw test` runs `@QuarkusTest`s against a separate local database, `devhub_test`, recreated on every run (`%test` profile: `drop-and-create`, mock mailer — read sent codes via `MockMailbox`). It must exist once: `CREATE DATABASE devhub_test OWNER devhub;` as a Postgres superuser. Never point the test profile at the dev database. Tests that hit rate-limited endpoints call `RateLimiter.clear()` in `@BeforeEach`.
+`./mvnw test` runs `@QuarkusTest`s against a separate local database, `devhub_test`, rebuilt from the Flyway migrations on every run (`%test` profile: `clean-at-start`, mock mailer — read sent codes via `MockMailbox`). It must exist once: `CREATE DATABASE devhub_test OWNER devhub;` as a Postgres superuser. Never point the test profile at the dev database. Tests that hit rate-limited endpoints call `RateLimiter.clear()` in `@BeforeEach`.
 
 ### Profile bootstrap quirk
 
