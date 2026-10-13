@@ -33,6 +33,8 @@ Required env vars are documented in `README.md` (Environment Variables section) 
 
 There is no linter/formatter configured in this repo.
 
+CI (`.github/workflows/ci.yml`) runs `./mvnw -B verify` (tests + package) on every PR and push to `master`, against a `postgres:17` service container with `devhub_test`. It generates a throwaway JWT key pair with `openssl` (the real `privateKey.pem` is not in git) and sets dummy `MAIL_USERNAME`/`MAIL_PASSWORD`, since unresolved `${…}` placeholders stop Quarkus from starting even with the mock mailer. A new required env var without a default must also be added to the workflow's `env`.
+
 ## Architecture
 
 ### Package-by-feature layout
