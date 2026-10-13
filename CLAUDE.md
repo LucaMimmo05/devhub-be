@@ -78,6 +78,15 @@ Wrong codes are counted: `otp_codes.attempts` is incremented on every mismatch (
 
 Exceeding a limit answers 429 `TOO_MANY_ATTEMPTS` with `Retry-After`. Annotate new unauthenticated auth endpoints with `@RateLimited`.
 
+### Account deletion (deferred)
+
+`DELETE /users/me` does **not** delete anything: `user/service/AccountDeletionService.requestDeletion` sets `users.deletion_requested_at`, deletes the user's refresh tokens (the stateless access token stays valid until it expires, ≤4h), records a row in `account_deletions` and emails the purge date (`templates/accountDeletion.html`, link built from `devhub.frontend-url` = `FRONTEND_ORIGIN`). It answers `{deletionScheduledFor}`.
+- Any sign-in during the grace period (password or GitHub, both go through `AuthService.issueSession`) cancels it; the auth response then carries `deletionCancelled: true` and the frontend shows a toast.
+- Pending accounts are hidden from `/users/search`.
+- `purgeExpired` (`@Scheduled` hourly) hard-deletes accounts older than `devhub.account-deletion.grace-period` (default `P7D`) through `UserService.deleteUser`, one transaction per user, re-checking the flag inside it. Failures are logged and retried next run.
+- `account_deletions` (no FK, ids and dates only) is the audit trail: `requested_at`, then `cancelled_at` or `purged_at`. Every step is also logged at INFO.
+- Never call `UserService.deleteUser` from a request path: it is the irreversible step reserved to the purge job.
+
 ### Entities
 
 All entities extend `common/entity/BaseEntity.java` (`@MappedSuperclass`): UUID primary key (`GenerationType.UUID`), `createdAt`/`updatedAt` auto-managed via Hibernate `@CreationTimestamp`/`@UpdateTimestamp`. Shared enums live in `common/enums/` (`Status`, `Priority`, `ProjectRole`, `UserRole`) and are persisted as `EnumType.STRING`.

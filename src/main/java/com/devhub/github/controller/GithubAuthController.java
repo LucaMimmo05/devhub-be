@@ -32,7 +32,7 @@ public class GithubAuthController {
     @POST
     public Response login(CallbackRequest request) {
         AuthResult result = github.login(request);
-        return Response.ok(new AuthResponse(result.accessToken, result.userProfile))
+        return Response.ok(AuthResponse.of(result))
                 .cookie(cookieUtil.createRefreshTokenCookie(result.refreshToken))
                 .build();
     }

@@ -9,6 +9,7 @@ import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 import jakarta.ws.rs.NotFoundException;
 
+import java.util.List;
 import java.util.UUID;
 
 @ApplicationScoped
@@ -20,6 +21,15 @@ public class UserService {
     @Inject
     UserProfileRepository userProfileRepository;
 
+    /** Profiles whose username contains {@code username}; accounts pending deletion are left out. */
+    public List<UserProfile> searchProfiles(String username) {
+        if (username == null || username.isBlank()) return List.of();
+        return userProfileRepository
+                .find("lower(username) like lower(?1) and user.deletionRequestedAt is null", "%" + username + "%")
+                .list();
+    }
+
+    /** Deletes the account and everything it owns, immediately. Only the purge job calls this. */
     @Transactional
     public void deleteUser(UUID userId) {
         User user = userRepository.findByIdOptional(userId)
