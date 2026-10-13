@@ -2,6 +2,7 @@ package com.devhub.auth.entity;
 
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 import jakarta.persistence.*;
+import org.hibernate.annotations.ColumnDefault;
 import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.Instant;
@@ -31,4 +32,9 @@ public class OtpCode extends PanacheEntityBase {
 
     @Column(name = "expires_at", nullable = false)
     public Instant expiresAt;
+
+    /** Wrong codes entered so far; the code is invalidated at OtpService.MAX_ATTEMPTS. */
+    @ColumnDefault("0")
+    @Column(nullable = false)
+    public int attempts;
 }

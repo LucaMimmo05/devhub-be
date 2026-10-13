@@ -3,6 +3,7 @@ package com.devhub.auth.controller;
 import com.devhub.auth.dto.SendOtpRequest;
 import com.devhub.auth.dto.VerifyOtpRequest;
 import com.devhub.auth.service.EmailService;
+import com.devhub.auth.util.RateLimited;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.POST;
@@ -21,6 +22,7 @@ public class EmailController {
     EmailService emailService;
 
     @Path( "/resend")
+    @RateLimited
     @POST
     public Response sendOtp(SendOtpRequest request) {
         emailService.sendOtpToVerifyEmail(request.email);
@@ -28,6 +30,7 @@ public class EmailController {
     }
 
     @Path("/verify")
+    @RateLimited
     @POST
     public Response verifyOtp(VerifyOtpRequest request) {
         emailService.verifyOtpToVerifyEmail(request.otp, request.email);
