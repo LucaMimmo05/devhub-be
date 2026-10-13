@@ -9,6 +9,7 @@ public class RegisterRequest {
 
     @NotBlank(message = "Email is required")
     @Email(message = "Invalid email format")
+    @Size(max = 100, message = "Email must be at most 100 characters")
     public String email;
 
     @NotBlank(message = "Username is required")
@@ -20,8 +21,10 @@ public class RegisterRequest {
     public String password;
 
     @URL
+    @Size(max = 255)
     public String avatarUrl;
 
     @NotBlank(message = "Full name is required")
+    @Size(max = 100, message = "Full name must be at most 100 characters")
     public String fullName;
 }

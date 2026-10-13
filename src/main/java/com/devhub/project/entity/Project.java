@@ -15,10 +15,10 @@ import java.util.stream.Collectors;
 @Entity
 @Table(name = "projects")
 public class Project extends BaseEntity {
-    @Column(name = "title", nullable = false, length = 25)
+    @Column(name = "title", nullable = false, length = 100)
     public String title;
 
-    @Column(name = "description", nullable = false, length = 255)
+    @Column(name = "description", nullable = false, length = 500)
     public String description;
 
     @Column(name = "status", nullable = false)
