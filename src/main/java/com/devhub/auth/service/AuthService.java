@@ -13,6 +13,7 @@ import com.devhub.user.entity.User;
 import com.devhub.user.entity.UserProfile;
 import com.devhub.user.repository.UserProfileRepository;
 import com.devhub.user.repository.UserRepository;
+import com.devhub.user.service.AccountDeletionService;
 import io.quarkus.elytron.security.common.BcryptUtil;
 import io.quarkus.security.UnauthorizedException;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -43,6 +44,9 @@ public class AuthService {
     @Inject
     RateLimiter rateLimiter;
 
+    @Inject
+    AccountDeletionService accountDeletionService;
+
     private static final int LOGINS_PER_EMAIL = 10;
     private static final Duration LOGIN_WINDOW = Duration.ofMinutes(15);
 
@@ -67,7 +71,7 @@ public class AuthService {
 
     /**
      * Starts a session for an already authenticated user (password login, "Sign in with GitHub"):
-     * a single active refresh token per user, plus a fresh access token.
+     * a single active refresh token per user, plus a fresh access token. Cancels a pending account deletion.
      */
     @Transactional
     public AuthResult issueSession(User existing) {
@@ -87,7 +91,10 @@ public class AuthService {
         }
 
 
-        return new AuthResult(accessToken, refreshToken.token, profile);
+        AuthResult result = new AuthResult(accessToken, refreshToken.token, profile);
+        // Signing in during the grace period keeps the account
+        result.deletionCancelled = accountDeletionService.cancelIfPending(existing);
+        return result;
     }
 
     @Transactional

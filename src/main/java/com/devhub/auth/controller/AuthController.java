@@ -33,7 +33,7 @@ public class AuthController {
         AuthResult result = authService.login(loginRequest);
         NewCookie refreshTokenCookie = cookieUtil.createRefreshTokenCookie(result.refreshToken);
 
-        AuthResponse response = new AuthResponse(result.accessToken, result.userProfile);
+        AuthResponse response = AuthResponse.of(result);
 
         return Response.ok(response).cookie(refreshTokenCookie).build();
     }

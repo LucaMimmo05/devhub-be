@@ -6,6 +6,7 @@ import com.devhub.security.jwt.entity.RefreshToken;
 import io.quarkus.elytron.security.common.BcryptUtil;
 import jakarta.persistence.*;
 
+import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -31,6 +32,10 @@ public class User extends BaseEntity {
 
     @Column(name = "is_active")
     public boolean isActive = true;
+
+    /** Set while a deletion is pending: the account is purged once the grace period has passed. */
+    @Column(name = "deletion_requested_at")
+    public OffsetDateTime deletionRequestedAt;
 
     @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     public UserProfile profile;

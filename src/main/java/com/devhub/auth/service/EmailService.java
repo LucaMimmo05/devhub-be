@@ -7,11 +7,16 @@ import io.quarkus.mailer.Mail;
 import io.quarkus.mailer.Mailer;
 import io.quarkus.qute.Location;
 import io.quarkus.qute.Template;
+import org.eclipse.microprofile.config.inject.ConfigProperty;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.validation.constraints.NotBlank;
 
 import java.time.Duration;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
+import java.util.Locale;
 
 @ApplicationScoped
 public class EmailService {
@@ -39,6 +44,16 @@ public class EmailService {
     @Inject
     @Location("resetPassword.html")
     Template resetPasswordTemplate;
+
+    @Inject
+    @Location("accountDeletion.html")
+    Template accountDeletionTemplate;
+
+    @ConfigProperty(name = "devhub.frontend-url")
+    String frontendUrl;
+
+    private static final DateTimeFormatter DELETION_DATE =
+            DateTimeFormatter.ofPattern("MMMM d, yyyy 'at' HH:mm 'UTC'", Locale.ENGLISH);
 
     public void sendOtpToVerifyEmail(String toEmail) {
         rateLimiter.check("otp-send:" + RateLimiter.normalize(toEmail), OTP_SENDS_PER_EMAIL, OTP_SEND_WINDOW);
@@ -95,6 +110,15 @@ public class EmailService {
         requireValid(otpService.verifyOtpWithType(email, otp, "PASSWORD_RESET"), "Invalid or expired reset code");
 
         authService.resetPassword(email, newPassword);
+    }
+
+    public void sendAccountDeletionScheduled(String toEmail, OffsetDateTime deleteOn) {
+        String bodyHtml = accountDeletionTemplate
+                .data("deleteOn", DELETION_DATE.format(deleteOn.withOffsetSameInstant(ZoneOffset.UTC)))
+                .data("loginUrl", frontendUrl + "/auth/login")
+                .render();
+
+        mailer.send(Mail.withHtml(toEmail, "Your DevHub account will be deleted", bodyHtml));
     }
 
     private static void requireValid(OtpCheck check, String invalidMessage) {

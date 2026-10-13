@@ -1,9 +1,11 @@
 package com.devhub.user.controller;
 
+import com.devhub.user.dto.AccountDeletionResponse;
 import com.devhub.user.dto.UpdateProfileRequest;
 import com.devhub.user.dto.UserProfileResponse;
 import com.devhub.user.entity.UserProfile;
 import com.devhub.user.repository.UserProfileRepository;
+import com.devhub.user.service.AccountDeletionService;
 import com.devhub.user.service.UserService;
 import io.quarkus.security.Authenticated;
 import jakarta.inject.Inject;
@@ -12,7 +14,6 @@ import jakarta.validation.Valid;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.MediaType;
-import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.core.SecurityContext;
 
 import java.util.List;
@@ -29,6 +30,9 @@ public class UserController {
 
     @Inject
     UserService userService;
+
+    @Inject
+    AccountDeletionService accountDeletionService;
 
     @GET
     @Path("/me")
@@ -59,18 +63,15 @@ public class UserController {
 
     @DELETE
     @Path("/me")
-    public Response deleteMe(@Context SecurityContext ctx) {
+    public AccountDeletionResponse deleteMe(@Context SecurityContext ctx) {
         UUID userId = UUID.fromString(ctx.getUserPrincipal().getName());
-        userService.deleteUser(userId);
-        return Response.noContent().build();
+        return new AccountDeletionResponse(accountDeletionService.requestDeletion(userId));
     }
 
     @GET
     @Path("/search")
     public List<UserProfileResponse> searchUsers(@QueryParam("username") String username) {
-        if (username == null || username.isBlank()) return List.of();
-        return userProfileRepository.find("lower(username) like lower(?1)", "%" + username + "%")
-                .list().stream().map(this::toResponse).toList();
+        return userService.searchProfiles(username).stream().map(this::toResponse).toList();
     }
 
     private UserProfileResponse toResponse(UserProfile profile) {
